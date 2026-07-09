@@ -1,0 +1,46 @@
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '../../../lib/supabaseServer';
+
+export const dynamic = 'force-dynamic';
+
+// GET /api/petty-cash -> saldo + riwayat terbaru
+export async function GET() {
+  const db = supabaseServer();
+  const { data, error } = await db
+    .from('petty_cash')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) return NextResponse.json({ error: 'Gagal membaca' }, { status: 500 });
+  const rows = data || [];
+  const balance = rows.reduce((s, r) => s + (r.type === 'in' ? Number(r.amount) : -Number(r.amount)), 0);
+  return NextResponse.json({ balance, transactions: rows });
+}
+
+// POST /api/petty-cash  { type:'in'|'out', amount, note, photo, created_by }
+// Pengeluaran ('out') WAJIB foto nota sebagai verifikasi.
+export async function POST(req) {
+  const db = supabaseServer();
+  let b;
+  try { b = await req.json(); } catch { return NextResponse.json({ error: 'Body tidak valid' }, { status: 400 }); }
+  const type = b.type === 'in' ? 'in' : 'out';
+  const amount = Number(b.amount) || 0;
+  if (amount <= 0) return NextResponse.json({ error: 'Nominal wajib diisi' }, { status: 400 });
+  const photo = (b.photo && typeof b.photo === 'string' && b.photo.startsWith('data:image')) ? b.photo : null;
+  if (type === 'out' && !photo)
+    return NextResponse.json({ error: 'Foto nota wajib untuk pengeluaran' }, { status: 400 });
+
+  const { data, error } = await db
+    .from('petty_cash')
+    .insert({
+      type,
+      amount,
+      note: (b.note || '').toString().slice(0, 300) || null,
+      photo,
+      created_by: (b.created_by || '').toString().slice(0, 80) || null,
+    })
+    .select()
+    .single();
+  if (error) return NextResponse.json({ error: 'Gagal menyimpan' }, { status: 500 });
+  return NextResponse.json({ ok: true, transaction: data });
+}

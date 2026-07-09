@@ -32,6 +32,8 @@ export async function POST(req) {
       min_stock: Number(b.min_stock) || 0,
       cost_price: Number(b.cost_price) || 0,
       supplier: b.supplier || null,
+      supplier_verified: b.supplier_verified !== false,
+      invoice_no: b.invoice_no ? String(b.invoice_no).trim() : null,
       barcode: b.barcode ? String(b.barcode).trim() : null,
       expiry_date: b.expiry_date || null,
       shelf_life_days: b.shelf_life_days ? Number(b.shelf_life_days) : null,

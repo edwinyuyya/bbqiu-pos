@@ -9,8 +9,37 @@ import FaceCapture from '../components/FaceCapture';
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
+function jamWIB(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+// Kompres foto nota (dari file/kamera) jadi data URL kecil.
+function compressReceipt(file, maxW = 640) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxW / (img.width || maxW));
+        const w = Math.round((img.width || maxW) * scale);
+        const h = Math.round((img.height || maxW) * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function CashierPage() {
+  const [mainTab, setMainTab] = useState('bill'); // bill | pettycash
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState({});
   const [tab, setTab] = useState('active'); // active | closed
@@ -122,8 +151,8 @@ function CashierPage() {
       </div>
 
       <div className="row" style={{ marginBottom: 14 }}>
-        <button className={`btn ${tab === 'active' ? 'btn-brand' : ''}`} onClick={() => setTab('active')}>Aktif</button>
-        <button className={`btn ${tab === 'closed' ? 'btn-brand' : ''}`} onClick={() => setTab('closed')}>Selesai</button>
+        <button className={`btn ${mainTab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setMainTab('bill')}>🧾 Bill</button>
+        <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Petty Cash</button>
       </div>
 
       <FaceCapture
@@ -132,6 +161,15 @@ function CashierPage() {
         onCapture={onPhotoTaken}
         onCancel={() => setCap(null)}
       />
+
+      {mainTab === 'pettycash' && <PettyCashTab />}
+
+      {mainTab === 'bill' && (
+      <>
+      <div className="row" style={{ marginBottom: 14 }}>
+        <button className={`btn ${tab === 'active' ? 'btn-brand' : ''}`} onClick={() => setTab('active')}>Aktif</button>
+        <button className={`btn ${tab === 'closed' ? 'btn-brand' : ''}`} onClick={() => setTab('closed')}>Selesai</button>
+      </div>
 
       {loading && <p className="muted">Memuat…</p>}
       {!loading && orders.length === 0 && (
@@ -149,9 +187,12 @@ function CashierPage() {
                   {paid ? 'Lunas' : 'Belum bayar'}
                 </span>
               </div>
-              <div className="row" style={{ marginTop: 6 }}>
+              <div className="row" style={{ marginTop: 6, flexWrap: 'wrap' }}>
                 <span className="badge badge-blue">{o.status}</span>
                 <span className="badge">{o.payment_method === 'qris' ? 'QRIS' : 'Kasir'}</span>
+                {!paid && o.customer_claimed_paid && (
+                  <span className="badge badge-amber">🔔 Klaim bayar — cek app bank</span>
+                )}
                 {o.customer_name && <span className="muted small">{o.customer_name}</span>}
               </div>
 
@@ -195,6 +236,125 @@ function CashierPage() {
             </div>
           );
         })}
+      </div>
+      </>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Petty Cash (kas kecil) ---------- */
+function PettyCashTab() {
+  const [balance, setBalance] = useState(0);
+  const [txs, setTxs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ type: 'out', amount: '', note: '', created_by: '' });
+  const [photo, setPhoto] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    const r = await fetch('/api/petty-cash');
+    const d = await r.json();
+    setBalance(d.balance || 0);
+    setTxs(d.transactions || []);
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function pickPhoto(file) {
+    if (!file) return;
+    try { setPhoto(await compressReceipt(file)); } catch { alert('Gagal memproses foto.'); }
+  }
+
+  async function submit() {
+    const amount = Number(form.amount);
+    if (!amount || amount <= 0) { alert('Nominal wajib diisi.'); return; }
+    if (form.type === 'out' && !photo) { alert('Foto nota wajib untuk pengeluaran.'); return; }
+    setSaving(true);
+    const r = await fetch('/api/petty-cash', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, amount, photo }),
+    });
+    if (r.ok) {
+      setForm({ type: form.type, amount: '', note: '', created_by: form.created_by });
+      setPhoto('');
+      setMsg('Tersimpan ✓');
+      await load();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      setMsg(d.error || 'Gagal menyimpan');
+    }
+    setSaving(false);
+    setTimeout(() => setMsg(''), 2500);
+  }
+
+  if (loading) return <p className="muted">Memuat…</p>;
+
+  return (
+    <div className="col">
+      <div className="card" style={{ borderColor: balance < 0 ? 'var(--red)' : 'var(--line)' }}>
+        <div className="muted small">Saldo Petty Cash</div>
+        <div className="bold" style={{ fontSize: 26 }}>{rupiah(balance)}</div>
+      </div>
+
+      <div className="card">
+        <div className="h2" style={{ marginBottom: 10 }}>Catat Transaksi</div>
+        <div className="row">
+          <label className={`btn ${form.type === 'in' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+            <input type="radio" name="pc-type" style={{ display: 'none' }} checked={form.type === 'in'} onChange={() => setForm({ ...form, type: 'in' })} />
+            ➕ Isi Ulang
+          </label>
+          <label className={`btn ${form.type === 'out' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+            <input type="radio" name="pc-type" style={{ display: 'none' }} checked={form.type === 'out'} onChange={() => setForm({ ...form, type: 'out' })} />
+            ➖ Pengeluaran
+          </label>
+        </div>
+        <input className="input" style={{ marginTop: 8 }} type="number" placeholder="Nominal (Rp)" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+        <input className="input" style={{ marginTop: 8 }} placeholder="Catatan (mis. beli es batu)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+        <input className="input" style={{ marginTop: 8 }} placeholder="Nama petugas" value={form.created_by} onChange={(e) => setForm({ ...form, created_by: e.target.value })} />
+
+        {form.type === 'out' && (
+          <div className="row" style={{ marginTop: 8, alignItems: 'center' }}>
+            <label className="btn" style={{ cursor: 'pointer' }}>
+              📷 Foto Nota (wajib)
+              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => pickPhoto(e.target.files?.[0])} />
+            </label>
+            {photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo} alt="nota" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+            )}
+          </div>
+        )}
+
+        <button className="btn btn-brand btn-block" style={{ marginTop: 10 }} disabled={saving} onClick={submit}>
+          {saving ? 'Menyimpan…' : 'Simpan'}
+        </button>
+        {msg && <p className="small" style={{ marginTop: 8 }}>{msg}</p>}
+      </div>
+
+      <div className="col">
+        <div className="h2">Riwayat</div>
+        {txs.map((t) => (
+          <div key={t.id} className="card">
+            <div className="between">
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                {t.photo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={t.photo} alt="nota" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8 }} />
+                )}
+                <div>
+                  <div className="bold">{t.note || (t.type === 'in' ? 'Isi ulang' : 'Pengeluaran')}</div>
+                  <div className="muted small">{t.created_by || '—'} · {jamWIB(t.created_at)}</div>
+                </div>
+              </div>
+              <span className="bold" style={{ color: t.type === 'in' ? '#5ee996' : '#ff8585' }}>
+                {t.type === 'in' ? '+' : '−'}{rupiah(t.amount)}
+              </span>
+            </div>
+          </div>
+        ))}
+        {txs.length === 0 && <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada transaksi.</p></div>}
       </div>
     </div>
   );

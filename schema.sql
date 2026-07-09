@@ -67,7 +67,9 @@ create table if not exists orders (
   cancelled_at   timestamptz,               -- waktu pembatalan (void)
   void_reason    text,                       -- alasan pembatalan
   voided_by      text,                       -- nama/inisial petugas yang membatalkan
-  void_photo     text                        -- foto wajah petugas saat void (data URL)
+  void_photo     text,                       -- foto wajah petugas saat void (data URL)
+  customer_claimed_paid boolean default false, -- pelanggan klaim sudah bayar (BELUM tentu Lunas resmi)
+  claimed_paid_at timestamptz                -- waktu klaim, untuk kasir verifikasi manual
 );
 
 -- untuk database yang sudah ada (aman dijalankan ulang):
@@ -75,6 +77,8 @@ alter table orders add column if not exists cancelled_at timestamptz;
 alter table orders add column if not exists void_reason text;
 alter table orders add column if not exists voided_by text;
 alter table orders add column if not exists void_photo text;
+alter table orders add column if not exists customer_claimed_paid boolean default false;
+alter table orders add column if not exists claimed_paid_at timestamptz;
 
 -- ---------- ITEM PADA ORDER ----------
 create table if not exists order_items (
@@ -255,4 +259,43 @@ create policy "allow all cashier_closures" on cashier_closures for all using (tr
 
 -- Pastikan tabel baru punya izin Data API + refresh sekali lagi.
 grant select, insert, update, delete on inventory_items, stock_movements, cashier_closures to anon, authenticated;
+notify pgrst, 'reload schema';
+
+-- ============================================================
+--  SUPPLIER (daftar terdaftar) + verifikasi nota utk custom
+-- ============================================================
+create table if not exists suppliers (
+  id          uuid default gen_random_uuid() primary key,
+  name        text not null unique,
+  contact     text,
+  created_at  timestamptz default now()
+);
+
+-- Kolom verifikasi di inventory_items utk supplier di luar daftar (dadakan)
+alter table inventory_items add column if not exists supplier_verified boolean default true;
+alter table inventory_items add column if not exists invoice_no text;
+
+alter table suppliers enable row level security;
+drop policy if exists "allow all suppliers" on suppliers;
+create policy "allow all suppliers" on suppliers for all using (true) with check (true);
+
+-- ============================================================
+--  PETTY CASH (kas kecil kasir) - verifikasi nota via foto
+-- ============================================================
+create table if not exists petty_cash (
+  id          uuid default gen_random_uuid() primary key,
+  type        text not null,             -- 'in' (isi ulang) | 'out' (pengeluaran)
+  amount      numeric not null,
+  note        text,
+  photo       text,                       -- foto nota bukti (wajib utk 'out')
+  created_by  text,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_pettycash_date on petty_cash(created_at);
+
+alter table petty_cash enable row level security;
+drop policy if exists "allow all petty_cash" on petty_cash;
+create policy "allow all petty_cash" on petty_cash for all using (true) with check (true);
+
+grant select, insert, update, delete on suppliers, petty_cash to anon, authenticated;
 notify pgrst, 'reload schema';

@@ -10,8 +10,9 @@ function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 const UNITS = ['gram', 'ml', 'pcs', 'sachet', 'porsi', 'botol', 'kg', 'liter', 'pack', 'ikat', 'box'];
 
 function StokInner() {
-  const [tab, setTab] = useState('receive'); // receive | stock | add
+  const [tab, setTab] = useState('receive'); // receive | stock | opname | add | supplier
   const [items, setItems] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -20,7 +21,12 @@ function StokInner() {
     setItems(d.items || []);
     setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  const loadSuppliers = useCallback(async () => {
+    const r = await fetch('/api/suppliers');
+    const d = await r.json();
+    setSuppliers(d.suppliers || []);
+  }, []);
+  useEffect(() => { load(); loadSuppliers(); }, [load, loadSuppliers]);
 
   return (
     <div className="container">
@@ -37,14 +43,16 @@ function StokInner() {
         <button className={`btn ${tab === 'stock' ? 'btn-brand' : ''}`} onClick={() => setTab('stock')}>Daftar Stok</button>
         <button className={`btn ${tab === 'opname' ? 'btn-brand' : ''}`} onClick={() => setTab('opname')}>🧮 Opname Massal</button>
         <button className={`btn ${tab === 'add' ? 'btn-brand' : ''}`} onClick={() => setTab('add')}>+ Barang</button>
+        <button className={`btn ${tab === 'supplier' ? 'btn-brand' : ''}`} onClick={() => setTab('supplier')}>🚚 Supplier</button>
       </div>
 
       {loading ? <p className="muted">Memuat…</p> : (
         <>
           {tab === 'receive' && <Receive items={items} reload={load} />}
-          {tab === 'stock' && <StockList items={items} reload={load} />}
+          {tab === 'stock' && <StockList items={items} reload={load} suppliers={suppliers} />}
           {tab === 'opname' && <OpnameMassal items={items} reload={load} />}
-          {tab === 'add' && <AddItem reload={load} onDone={() => setTab('stock')} />}
+          {tab === 'add' && <AddItem reload={load} onDone={() => setTab('stock')} suppliers={suppliers} />}
+          {tab === 'supplier' && <SupplierTab suppliers={suppliers} reload={loadSuppliers} />}
         </>
       )}
     </div>
@@ -150,8 +158,80 @@ function Receive({ items, reload }) {
   );
 }
 
+// Field supplier dengan autocomplete dari daftar terdaftar.
+// Kalau nama yang diketik TIDAK ada di daftar -> anggap "custom/dadakan",
+// wajib isi No. Nota Pembelian sebagai verifikasi.
+function SupplierField({ suppliers, value, invoiceNo, onChangeSupplier, onChangeInvoice }) {
+  const names = useMemo(() => suppliers.map((s) => s.name), [suppliers]);
+  const isCustom = value && value.trim() && !names.some((n) => n.toLowerCase() === value.trim().toLowerCase());
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <input
+        className="input" placeholder="Supplier (ketik atau pilih dari daftar)"
+        list="supplier-suggestions" value={value || ''}
+        onChange={(e) => onChangeSupplier(e.target.value)}
+      />
+      <datalist id="supplier-suggestions">
+        {names.map((n) => <option key={n} value={n} />)}
+      </datalist>
+      {isCustom && (
+        <div className="card" style={{ padding: '8px 10px', borderColor: 'var(--red)' }}>
+          <div className="small" style={{ color: '#ff8585', marginBottom: 4 }}>
+            ⚠️ Supplier belum terdaftar (dadakan) — wajib isi No. Nota untuk verifikasi.
+          </div>
+          <input
+            className="input" placeholder="No. Nota Pembelian *"
+            value={invoiceNo || ''} onChange={(e) => onChangeInvoice(e.target.value)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Tab Supplier (daftar terdaftar) ---------- */
+function SupplierTab({ suppliers, reload }) {
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function add() {
+    if (!name.trim()) return;
+    setBusy(true);
+    const r = await fetch('/api/suppliers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, contact }) });
+    if (r.ok) { setName(''); setContact(''); await reload(); setMsg('Supplier ditambahkan ✓'); }
+    else { const d = await r.json().catch(() => ({})); setMsg(d.error || 'Gagal menambah'); }
+    setBusy(false);
+    setTimeout(() => setMsg(''), 2500);
+  }
+
+  return (
+    <div className="col">
+      <div className="card" style={{ maxWidth: 480 }}>
+        <div className="h2" style={{ marginBottom: 10 }}>Tambah Supplier Terdaftar</div>
+        <div className="col" style={{ gap: 8 }}>
+          <input className="input" placeholder="Nama supplier" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input" placeholder="Kontak (opsional)" value={contact} onChange={(e) => setContact(e.target.value)} />
+        </div>
+        <button className="btn btn-brand btn-block" style={{ marginTop: 10 }} disabled={busy} onClick={add}>Tambah</button>
+        {msg && <p className="small" style={{ marginTop: 8 }}>{msg}</p>}
+      </div>
+      <div className="col">
+        {suppliers.map((s) => (
+          <div key={s.id} className="card">
+            <span className="bold">{s.name}</span>
+            {s.contact && <span className="muted small"> · {s.contact}</span>}
+          </div>
+        ))}
+        {suppliers.length === 0 && <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada supplier terdaftar. Semua input supplier akan dianggap dadakan (wajib no. nota).</p></div>}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Daftar Stok ---------- */
-function StockList({ items, reload }) {
+function StockList({ items, reload, suppliers }) {
   const [edit, setEdit] = useState(null);
   async function adjust(it, mode) {
     const label = mode === 'set' ? `Set stok ${it.name} jadi berapa?` : `Pakai/keluar berapa ${it.unit} ${it.name}?`;
@@ -175,7 +255,13 @@ function StockList({ items, reload }) {
               <div>
                 <span className="bold">{it.name}</span>
                 {it.category && <span className="muted small"> · {it.category}</span>}
-                <div className="muted small">Min: {Number(it.min_stock)} {it.unit} · Beli {rupiah(it.cost_price)}/{it.unit}{it.supplier ? ` · ${it.supplier}` : ''}{it.barcode ? ` · 🏷️${it.barcode}` : ''}</div>
+                <div className="muted small">
+                  Min: {Number(it.min_stock)} {it.unit} · Beli {rupiah(it.cost_price)}/{it.unit}
+                  {it.supplier ? ` · ${it.supplier}` : ''}
+                  {it.supplier && it.supplier_verified === false ? ' 🔶dadakan' : ''}
+                  {it.invoice_no ? ` (Nota: ${it.invoice_no})` : ''}
+                  {it.barcode ? ` · 🏷️${it.barcode}` : ''}
+                </div>
               </div>
               <span className={`badge ${low ? 'badge-red' : 'badge-green'}`}>{Number(it.stock_qty)} {it.unit}</span>
             </div>
@@ -189,19 +275,26 @@ function StockList({ items, reload }) {
         );
       })}
       {items.length === 0 && <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada barang.</p></div>}
-      {edit && <EditModal item={edit} onClose={() => setEdit(null)} reload={reload} />}
+      {edit && <EditModal item={edit} onClose={() => setEdit(null)} reload={reload} suppliers={suppliers} />}
     </div>
   );
 }
 
-function EditModal({ item, onClose, reload }) {
+function EditModal({ item, onClose, reload, suppliers }) {
   const [f, setF] = useState({ ...item });
   const [busy, setBusy] = useState(false);
+  const names = (suppliers || []).map((s) => s.name);
+  const isCustom = f.supplier && f.supplier.trim() && !names.some((n) => n.toLowerCase() === f.supplier.trim().toLowerCase());
   async function save() {
+    if (isCustom && !String(f.invoice_no || '').trim()) { alert('Supplier belum terdaftar — No. Nota wajib diisi.'); return; }
     setBusy(true);
     await fetch(`/api/inventory/${item.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: f.name, unit: f.unit, category: f.category, min_stock: f.min_stock, cost_price: f.cost_price, supplier: f.supplier, barcode: f.barcode, expiry_date: f.expiry_date || '', shelf_life_days: f.shelf_life_days ?? '' }),
+      body: JSON.stringify({
+        name: f.name, unit: f.unit, category: f.category, min_stock: f.min_stock, cost_price: f.cost_price,
+        supplier: f.supplier, barcode: f.barcode, expiry_date: f.expiry_date || '', shelf_life_days: f.shelf_life_days ?? '',
+        supplier_verified: !isCustom, invoice_no: isCustom ? f.invoice_no : '',
+      }),
     });
     await reload(); setBusy(false); onClose();
   }
@@ -219,7 +312,11 @@ function EditModal({ item, onClose, reload }) {
             <input className="input" type="number" placeholder="Stok minimum" value={f.min_stock ?? ''} onChange={(e) => setF({ ...f, min_stock: e.target.value })} />
             <input className="input" type="number" placeholder="Harga beli" value={f.cost_price ?? ''} onChange={(e) => setF({ ...f, cost_price: e.target.value })} />
           </div>
-          <input className="input" placeholder="Supplier" value={f.supplier || ''} onChange={(e) => setF({ ...f, supplier: e.target.value })} />
+          <SupplierField
+            suppliers={suppliers || []} value={f.supplier} invoiceNo={f.invoice_no}
+            onChangeSupplier={(v) => setF({ ...f, supplier: v })}
+            onChangeInvoice={(v) => setF({ ...f, invoice_no: v })}
+          />
           <input className="input" placeholder="Barcode (opsional)" value={f.barcode || ''} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
           <div className="row">
             <label className="muted small" style={{ flex: 1 }}>Tanggal kadaluarsa<input className="input" type="date" value={f.expiry_date ? String(f.expiry_date).slice(0, 10) : ''} onChange={(e) => setF({ ...f, expiry_date: e.target.value })} /></label>
@@ -237,14 +334,17 @@ function EditModal({ item, onClose, reload }) {
 }
 
 /* ---------- Tambah Barang ---------- */
-function AddItem({ reload, onDone }) {
-  const [f, setF] = useState({ name: '', unit: 'pcs', category: '', stock_qty: '', min_stock: '', cost_price: '', supplier: '', barcode: '', expiry_date: '' });
+function AddItem({ reload, onDone, suppliers }) {
+  const [f, setF] = useState({ name: '', unit: 'pcs', category: '', stock_qty: '', min_stock: '', cost_price: '', supplier: '', invoice_no: '', barcode: '', expiry_date: '' });
   const [busy, setBusy] = useState(false);
   const [scan, setScan] = useState(false);
+  const names = (suppliers || []).map((s) => s.name);
+  const isCustom = f.supplier && f.supplier.trim() && !names.some((n) => n.toLowerCase() === f.supplier.trim().toLowerCase());
   async function save() {
     if (!f.name.trim()) return;
+    if (isCustom && !f.invoice_no.trim()) { alert('Supplier belum terdaftar — No. Nota wajib diisi.'); return; }
     setBusy(true);
-    await fetch('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) });
+    await fetch('/api/inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...f, supplier_verified: !isCustom }) });
     await reload(); setBusy(false); onDone();
   }
   return (
@@ -260,10 +360,12 @@ function AddItem({ reload, onDone }) {
           <input className="input" type="number" placeholder="Stok awal" value={f.stock_qty} onChange={(e) => setF({ ...f, stock_qty: e.target.value })} />
           <input className="input" type="number" placeholder="Stok minimum" value={f.min_stock} onChange={(e) => setF({ ...f, min_stock: e.target.value })} />
         </div>
-        <div className="row">
-          <input className="input" type="number" placeholder="Harga beli / satuan" value={f.cost_price} onChange={(e) => setF({ ...f, cost_price: e.target.value })} />
-          <input className="input" placeholder="Supplier" value={f.supplier} onChange={(e) => setF({ ...f, supplier: e.target.value })} />
-        </div>
+        <input className="input" type="number" placeholder="Harga beli / satuan" value={f.cost_price} onChange={(e) => setF({ ...f, cost_price: e.target.value })} />
+        <SupplierField
+          suppliers={suppliers || []} value={f.supplier} invoiceNo={f.invoice_no}
+          onChangeSupplier={(v) => setF({ ...f, supplier: v })}
+          onChangeInvoice={(v) => setF({ ...f, invoice_no: v })}
+        />
         <div className="row">
           <input className="input" placeholder="Barcode (opsional)" value={f.barcode} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
           <button className="btn" onClick={() => setScan(true)}>📷</button>

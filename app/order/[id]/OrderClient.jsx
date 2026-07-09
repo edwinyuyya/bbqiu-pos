@@ -33,17 +33,14 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
 
   const isQris = order.payment_method === 'qris';
   const paid = order.payment_status === 'paid';
+  const claimed = order.customer_claimed_paid && !paid;
 
-  // Simulasi konfirmasi pembayaran QRIS (mode mock tanpa payment gateway).
-  // Untuk produksi: pembayaran dikonfirmasi via webhook payment gateway.
+  // Pelanggan hanya bisa "klaim" sudah bayar (bukan menandai Lunas resmi).
+  // Kasir yang memverifikasi mutasi bank & menekan "Tandai Lunas" di /cashier.
   async function confirmQrisPaid() {
     setConfirming(true);
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_status: 'paid' }),
-      });
+      const res = await fetch(`/api/orders/${order.id}/claim-paid`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) setOrder(data.order);
     } finally {
@@ -63,13 +60,13 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
       <div className="row" style={{ marginTop: 6 }}>
         <span className="badge">Meja {order.table_number}</span>
         <span className="badge badge-blue">{STATUS_LABEL[order.status] || order.status}</span>
-        <span className={`badge ${paid ? 'badge-green' : 'badge-amber'}`}>
-          {paid ? 'Lunas' : 'Belum bayar'}
+        <span className={`badge ${paid ? 'badge-green' : claimed ? 'badge-blue' : 'badge-amber'}`}>
+          {paid ? 'Lunas' : claimed ? 'Menunggu verifikasi kasir' : 'Belum bayar'}
         </span>
       </div>
 
       {/* Pembayaran */}
-      {!paid && isQris && (
+      {!paid && isQris && !claimed && (
         <div className="card" style={{ marginTop: 16, textAlign: 'center' }}>
           <div className="h2">Scan untuk bayar (QRIS)</div>
           {qrDataUrl ? (
@@ -91,6 +88,16 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
           >
             {confirming ? 'Memproses…' : 'Saya sudah bayar'}
           </button>
+        </div>
+      )}
+
+      {!paid && claimed && (
+        <div className="card" style={{ marginTop: 16, textAlign: 'center', borderColor: 'var(--blue)' }}>
+          <div className="h2">⏳ Menunggu verifikasi kasir</div>
+          <p className="muted small" style={{ marginTop: 6 }}>
+            Klaim pembayaranmu sudah kami terima. Kasir akan memverifikasi mutasi
+            bank sebelum menandai pesanan Lunas. Halaman ini otomatis diperbarui.
+          </p>
         </div>
       )}
 

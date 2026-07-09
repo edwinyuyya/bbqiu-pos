@@ -12,6 +12,28 @@ function rupiah(n) {
 function randToken(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
+// Kompres gambar (dari file) jadi data URL kecil (lebar maks 640px, JPEG) untuk foto menu.
+function compressImage(file, maxW = 640) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxW / (img.width || maxW));
+        const w = Math.round((img.width || maxW) * scale);
+        const h = Math.round((img.height || maxW) * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function AdminPage() {
   const [tab, setTab] = useState('tables');
@@ -134,12 +156,22 @@ function TablesTab({ tables, origin, reload }) {
 }
 
 function MenuTab({ items, categories, stations, reload }) {
-  const [form, setForm] = useState({ name: '', price: '', category_id: '', station_id: '', description: '' });
+  const EMPTY = { name: '', price: '', category_id: '', station_id: '', description: '', image_url: '', daily_qty: '' };
+  const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', price: '', category_id: '', station_id: '', description: '' });
+  const [editForm, setEditForm] = useState(EMPTY);
 
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
+
+  async function pickImage(file, setState) {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { alert('Foto terlalu besar (maks 8MB).'); return; }
+    try {
+      const dataUrl = await compressImage(file);
+      setState((f) => ({ ...f, image_url: dataUrl }));
+    } catch { alert('Gagal memproses foto.'); }
+  }
 
   function startEdit(it) {
     setEditId(it.id);
@@ -149,6 +181,8 @@ function MenuTab({ items, categories, stations, reload }) {
       category_id: it.category_id || '',
       station_id: it.station_id || '',
       description: it.description || '',
+      image_url: it.image_url || '',
+      daily_qty: it.daily_qty ?? '',
     });
   }
   async function saveEdit(it) {
@@ -161,6 +195,8 @@ function MenuTab({ items, categories, stations, reload }) {
       description: editForm.description.trim() || null,
       category_id: editForm.category_id || null,
       station_id: station,
+      image_url: editForm.image_url || null,
+      daily_qty: editForm.daily_qty === '' ? null : Number(editForm.daily_qty),
     }).eq('id', it.id);
     setEditId(null);
     await reload();
@@ -177,9 +213,11 @@ function MenuTab({ items, categories, stations, reload }) {
       description: form.description.trim() || null,
       category_id: form.category_id || null,
       station_id: station,
+      image_url: form.image_url || null,
+      daily_qty: form.daily_qty === '' ? null : Number(form.daily_qty),
       available: true,
     });
-    setForm({ name: '', price: '', category_id: '', station_id: '', description: '' });
+    setForm(EMPTY);
     await reload();
     setBusy(false);
   }
@@ -214,6 +252,19 @@ function MenuTab({ items, categories, stations, reload }) {
           </select>
         </div>
         <input className="input" style={{ marginTop: 10 }} placeholder="Deskripsi (opsional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <div className="row" style={{ marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input className="input" type="number" style={{ width: 200 }} placeholder="Sisa porsi hari ini (opsional)" value={form.daily_qty} onChange={(e) => setForm({ ...form, daily_qty: e.target.value })} />
+          <label className="btn" style={{ cursor: 'pointer' }}>
+            📷 Foto
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pickImage(e.target.files?.[0], setForm)} />
+          </label>
+          {form.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={form.image_url} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+          )}
+          {form.image_url && <button className="btn" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setForm({ ...form, image_url: '' })}>Hapus foto</button>}
+        </div>
+        <p className="muted small" style={{ marginTop: 6 }}>Sisa porsi kosong = tak terbatas. Kalau diisi, menu auto-tutup saat habis.</p>
         <button className="btn btn-brand" style={{ marginTop: 10 }} disabled={busy} onClick={addItem}>Tambah Menu</button>
       </div>
 
@@ -235,6 +286,18 @@ function MenuTab({ items, categories, stations, reload }) {
                   </select>
                 </div>
                 <input className="input" placeholder="Deskripsi (opsional)" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+                <div className="row" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input className="input" type="number" style={{ width: 200 }} placeholder="Sisa porsi hari ini (opsional)" value={editForm.daily_qty} onChange={(e) => setEditForm({ ...editForm, daily_qty: e.target.value })} />
+                  <label className="btn" style={{ cursor: 'pointer' }}>
+                    📷 Foto
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pickImage(e.target.files?.[0], setEditForm)} />
+                  </label>
+                  {editForm.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={editForm.image_url} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                  )}
+                  {editForm.image_url && <button className="btn" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setEditForm({ ...editForm, image_url: '' })}>Hapus foto</button>}
+                </div>
                 <div className="row">
                   <button className="btn btn-brand" disabled={busy} onClick={() => saveEdit(it)}>Simpan</button>
                   <button className="btn" onClick={() => setEditId(null)}>Batal</button>
@@ -243,9 +306,16 @@ function MenuTab({ items, categories, stations, reload }) {
             ) : (
               <>
                 <div className="between">
-                  <div>
-                    <span className="bold">{it.name}</span> · {rupiah(it.price)}
-                    {it.description && <div className="muted small">{it.description}</div>}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    {it.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.image_url} alt={it.name} style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8 }} />
+                    )}
+                    <div>
+                      <span className="bold">{it.name}</span> · {rupiah(it.price)}
+                      {it.daily_qty != null && <span className="badge badge-amber" style={{ marginLeft: 6 }}>sisa {it.daily_qty}</span>}
+                      {it.description && <div className="muted small">{it.description}</div>}
+                    </div>
                   </div>
                   <span className={`badge ${it.available ? 'badge-green' : 'badge-red'}`}>{it.available ? 'Tersedia' : 'Habis'}</span>
                 </div>

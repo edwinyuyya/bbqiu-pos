@@ -6,7 +6,8 @@ import PinGate from '../components/PinGate';
 import BarcodeScanner from './BarcodeScanner';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
-const UNITS = ['pcs', 'kg', 'gram', 'pack', 'liter', 'ikat', 'box'];
+// Satuan terkecil didahulukan (gram, ml, pcs, sachet, porsi, botol)
+const UNITS = ['gram', 'ml', 'pcs', 'sachet', 'porsi', 'botol', 'kg', 'liter', 'pack', 'ikat', 'box'];
 
 function StokInner() {
   const [tab, setTab] = useState('receive'); // receive | stock | add
@@ -34,6 +35,7 @@ function StokInner() {
       <div className="row" style={{ marginBottom: 14, flexWrap: 'wrap' }}>
         <button className={`btn ${tab === 'receive' ? 'btn-brand' : ''}`} onClick={() => setTab('receive')}>📥 Barang Datang</button>
         <button className={`btn ${tab === 'stock' ? 'btn-brand' : ''}`} onClick={() => setTab('stock')}>Daftar Stok</button>
+        <button className={`btn ${tab === 'opname' ? 'btn-brand' : ''}`} onClick={() => setTab('opname')}>🧮 Opname Massal</button>
         <button className={`btn ${tab === 'add' ? 'btn-brand' : ''}`} onClick={() => setTab('add')}>+ Barang</button>
       </div>
 
@@ -41,6 +43,7 @@ function StokInner() {
         <>
           {tab === 'receive' && <Receive items={items} reload={load} />}
           {tab === 'stock' && <StockList items={items} reload={load} />}
+          {tab === 'opname' && <OpnameMassal items={items} reload={load} />}
           {tab === 'add' && <AddItem reload={load} onDone={() => setTab('stock')} />}
         </>
       )}
@@ -271,6 +274,83 @@ function AddItem({ reload, onDone }) {
       </div>
       <button className="btn btn-brand btn-block" style={{ marginTop: 12 }} disabled={busy} onClick={save}>{busy ? 'Menyimpan…' : 'Simpan Barang'}</button>
       {scan && <BarcodeScanner onDetected={(c) => { setF((x) => ({ ...x, barcode: c })); setScan(false); }} onClose={() => setScan(false)} />}
+    </div>
+  );
+}
+
+/* ---------- Opname Massal (hitung ulang stok sekaligus) ---------- */
+function OpnameMassal({ items, reload }) {
+  const [counts, setCounts] = useState({}); // id -> jumlah fisik hasil hitung
+  const [q, setQ] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return items.filter((i) => !s || i.name.toLowerCase().includes(s) || (i.category || '').toLowerCase().includes(s));
+  }, [items, q]);
+
+  const rows = Object.entries(counts).filter(([, v]) => v !== '' && v != null);
+
+  async function save() {
+    if (!rows.length) return;
+    if (!confirm(`Simpan opname untuk ${rows.length} barang? Stok akan di-SET sesuai hasil hitung.`)) return;
+    setSaving(true);
+    const payload = { action: 'opname', items: rows.map(([id, qty]) => ({ item_id: id, qty: Number(qty) })) };
+    const r = await fetch('/api/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (r.ok) { setCounts({}); setMsg('Opname tersimpan ✓'); await reload(); setTimeout(() => setMsg(''), 2500); }
+    else setMsg('Gagal menyimpan');
+    setSaving(false);
+  }
+
+  return (
+    <div className="col" style={{ paddingBottom: 90 }}>
+      <div className="card" style={{ padding: '10px 12px' }}>
+        <p className="muted small" style={{ margin: 0 }}>
+          Isi jumlah fisik hasil hitung untuk tiap barang. Yang dikosongkan tidak diubah.
+          Stok akan <b>di-set</b> sesuai angka yang kamu isi (untuk opname besar/tutup buku).
+        </p>
+      </div>
+      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {msg && <div className="card" style={{ padding: '8px 12px' }}><span className="small">{msg}</span></div>}
+
+      <div className="col">
+        {filtered.map((it) => {
+          const val = counts[it.id];
+          const changed = val !== '' && val != null && Number(val) !== Number(it.stock_qty);
+          return (
+            <div key={it.id} className="card" style={changed ? { borderColor: 'var(--brand)' } : null}>
+              <div className="between" style={{ alignItems: 'center' }}>
+                <div>
+                  <div className="bold">{it.name}</div>
+                  <div className="muted small">Sistem: {Number(it.stock_qty)} {it.unit}{it.category ? ` · ${it.category}` : ''}</div>
+                </div>
+                <div className="row" style={{ alignItems: 'center' }}>
+                  <input className="input" type="number" inputMode="decimal" style={{ width: 100 }} placeholder="fisik"
+                    value={val ?? ''} onChange={(e) => setCounts((c) => ({ ...c, [it.id]: e.target.value }))} />
+                  <span className="muted small">{it.unit}</span>
+                </div>
+              </div>
+              {changed && (
+                <div className="small" style={{ marginTop: 6, color: Number(val) < Number(it.stock_qty) ? '#ff8585' : '#5ee996' }}>
+                  Selisih: {Number(val) - Number(it.stock_qty) > 0 ? '+' : ''}{Number(val) - Number(it.stock_qty)} {it.unit}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <div className="card"><p className="muted" style={{ margin: 0 }}>Tidak ada barang.</p></div>}
+      </div>
+
+      {rows.length > 0 && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, background: 'var(--bg)', borderTop: '1px solid var(--line)', padding: '12px 16px' }}>
+          <div className="container" style={{ padding: 0 }}>
+            <button className="btn btn-brand btn-block" disabled={saving} onClick={save}>
+              {saving ? 'Menyimpan…' : `Simpan Opname · ${rows.length} barang`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

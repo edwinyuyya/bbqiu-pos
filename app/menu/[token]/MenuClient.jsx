@@ -111,30 +111,47 @@ export default function MenuClient({ token, table, categories, items, taxPercent
         <section key={cat.id} style={{ marginBottom: 18 }}>
           <h2 className="h2" style={{ marginBottom: 10 }}>{cat.name}</h2>
           <div className="col">
-            {cat.items.map((it) => (
+            {cat.items.map((it) => {
+              const limited = it.daily_qty != null;
+              const remaining = limited ? Number(it.daily_qty) : null;
+              const inCart = cart[it.id] || 0;
+              const atMax = limited && inCart >= remaining;
+              return (
               <div key={it.id} className="card">
                 <div className="between">
-                  <div style={{ flex: 1 }}>
-                    <div className="bold">{it.name}</div>
-                    {it.description && (
-                      <div className="muted small" style={{ marginTop: 2 }}>
-                        {it.description}
-                      </div>
+                  <div style={{ display: 'flex', gap: 12, flex: 1, alignItems: 'flex-start' }}>
+                    {it.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.image_url} alt={it.name} style={{ width: 68, height: 68, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
                     )}
-                    <div style={{ marginTop: 6 }}>{rupiah(it.price)}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="bold">{it.name}</div>
+                      {it.description && (
+                        <div className="muted small" style={{ marginTop: 2 }}>
+                          {it.description}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 6 }}>{rupiah(it.price)}</div>
+                      {limited && (
+                        <div className="badge badge-amber" style={{ marginTop: 6 }}>
+                          {remaining > 0 ? `sisa ${remaining} porsi` : 'habis'}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="qty">
-                    {cart[it.id] > 0 && (
+                    {inCart > 0 && (
                       <>
                         <button onClick={() => setQty(it.id, -1)}>−</button>
-                        <span className="bold">{cart[it.id]}</span>
+                        <span className="bold">{inCart}</span>
                       </>
                     )}
-                    <button onClick={() => setQty(it.id, 1)}>+</button>
+                    <button onClick={() => setQty(it.id, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ))}

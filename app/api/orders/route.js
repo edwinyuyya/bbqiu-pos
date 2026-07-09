@@ -38,12 +38,19 @@ export async function POST(req) {
   const ids = [...new Set(items.map((i) => i.menu_item_id))];
   const { data: menu, error: mErr } = await db
     .from('menu_items')
-    .select('id, name, price, available, station_id, category_id, categories(station_id)')
+    .select('id, name, price, available, daily_qty, station_id, category_id, categories(station_id)')
     .in('id', ids);
   if (mErr)
     return NextResponse.json({ error: 'Gagal membaca menu' }, { status: 500 });
 
   const menuById = Object.fromEntries((menu || []).map((m) => [m.id, m]));
+
+  // Gabungkan qty per menu (kalau client kirim baris terpisah untuk menu sama)
+  const qtyByMenu = {};
+  for (const it of items) {
+    const q = Math.max(1, parseInt(it.qty, 10) || 1);
+    qtyByMenu[it.menu_item_id] = (qtyByMenu[it.menu_item_id] || 0) + q;
+  }
 
   const lineItems = [];
   for (const it of items) {
@@ -51,6 +58,12 @@ export async function POST(req) {
     if (!m || m.available === false)
       return NextResponse.json(
         { error: 'Ada menu yang tidak tersedia' },
+        { status: 400 }
+      );
+    // Cegah oversell untuk menu berporsi terbatas
+    if (m.daily_qty != null && qtyByMenu[m.id] > Number(m.daily_qty))
+      return NextResponse.json(
+        { error: `Porsi "${m.name}" tinggal ${Number(m.daily_qty)}. Kurangi jumlahnya.` },
         { status: 400 }
       );
     const qty = Math.max(1, parseInt(it.qty, 10) || 1);
@@ -102,6 +115,17 @@ export async function POST(req) {
 
   // 6) Buat antrian cetak untuk dapur
   await db.from('print_jobs').insert({ order_id: order.id, status: 'pending' });
+
+  // 7) Kurangi sisa porsi (menu berporsi terbatas). Auto-tutup saat 0.
+  for (const m of menu || []) {
+    if (m.daily_qty == null) continue;
+    const ordered = qtyByMenu[m.id] || 0;
+    if (!ordered) continue;
+    const left = Math.max(0, Number(m.daily_qty) - ordered);
+    const patch = { daily_qty: left };
+    if (left <= 0) patch.available = false; // habis -> otomatis tutup
+    await db.from('menu_items').update(patch).eq('id', m.id);
+  }
 
   return NextResponse.json({ ok: true, order_id: order.id, order_no: order.order_no });
 }

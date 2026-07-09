@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SoldOutBanner from './components/SoldOutBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,8 @@ export default function Home() {
           ke 3 station.
         </p>
       </div>
+
+      <SoldOutBanner />
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
         {links.map((l) => (

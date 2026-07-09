@@ -38,11 +38,14 @@ create table if not exists menu_items (
   description  text,
   price        numeric not null default 0,
   station_id   text references stations(id),  -- override station (opsional)
-  image_url    text,
+  image_url    text,                            -- foto menu (data URL / URL)
+  daily_qty    integer,                         -- sisa porsi hari ini (null = tak terbatas)
   available    boolean default true,
   sort_order   int default 0,
   created_at   timestamptz default now()
 );
+alter table menu_items add column if not exists image_url text;
+alter table menu_items add column if not exists daily_qty integer;
 
 -- ---------- ORDER (bill per meja) ----------
 create table if not exists orders (

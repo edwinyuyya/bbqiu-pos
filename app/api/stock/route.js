@@ -38,6 +38,26 @@ export async function POST(req) {
     return NextResponse.json({ ok: true, count: moves.length });
   }
 
+  if (b.action === 'opname') {
+    // Opname massal: set stok tiap barang ke jumlah fisik, catat selisih sebagai 'adjust'
+    const rows = Array.isArray(b.items) ? b.items.filter((x) => x.item_id && x.qty !== undefined && x.qty !== '') : [];
+    if (!rows.length) return NextResponse.json({ error: 'Tidak ada barang' }, { status: 400 });
+    const ids = rows.map((r) => r.item_id);
+    const { data: cur } = await db.from('inventory_items').select('id, stock_qty').in('id', ids);
+    const byId = Object.fromEntries((cur || []).map((i) => [i.id, i]));
+    const moves = [];
+    for (const r of rows) {
+      const it = byId[r.item_id];
+      if (!it) continue;
+      const newStock = Number(r.qty) || 0;
+      const diff = newStock - Number(it.stock_qty || 0);
+      await db.from('inventory_items').update({ stock_qty: newStock }).eq('id', r.item_id);
+      moves.push({ item_id: r.item_id, type: 'adjust', qty: diff, note: b.note || 'Opname massal' });
+    }
+    if (moves.length) await db.from('stock_movements').insert(moves);
+    return NextResponse.json({ ok: true, count: moves.length });
+  }
+
   if (b.action === 'adjust') {
     if (!b.item_id) return NextResponse.json({ error: 'item_id wajib' }, { status: 400 });
     const { data: it } = await db.from('inventory_items').select('stock_qty').eq('id', b.item_id).single();

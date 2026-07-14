@@ -1,9 +1,40 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
+
+// Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
+function beep(ctx) {
+  const tone = (freq, start, dur) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start(ctx.currentTime + start);
+    o.stop(ctx.currentTime + start + dur + 0.05);
+  };
+  tone(880, 0, 0.16);
+  tone(1046, 0.18, 0.2);
+}
+
+function speak(text) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 1;
+    u.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch {}
+}
 
 const STATIONS = [
   { id: 'shaokao', name: 'Shaokao', cls: 'station-shaokao' },
@@ -23,6 +54,19 @@ function KitchenPage() {
   const [pendingPrints, setPendingPrints] = useState({}); // order_id -> print_job
   const [stationFilter, setStationFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [soundOn, setSoundOn] = useState(false);
+  const audioCtxRef = useRef(null);
+  const seenOrderIds = useRef(null); // null = belum pernah load (jangan alert saat pertama buka)
+
+  function enableSound() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      audioCtxRef.current = new Ctx();
+      beep(audioCtxRef.current);
+      speak('Sound enabled');
+      setSoundOn(true);
+    } catch {}
+  }
 
   const load = useCallback(async () => {
     const { data: ords } = await supabase
@@ -67,6 +111,32 @@ function KitchenPage() {
     return () => clearInterval(t);
   }, [load]);
 
+  // Deteksi order baru & bunyikan alert suara ("New order coming!").
+  // Saat pertama kali halaman dibuka, order yang sudah ada TIDAK di-alert
+  // (supaya tidak berbunyi beruntun untuk pesanan lama).
+  useEffect(() => {
+    const currentIds = new Set(orders.map((o) => o.id));
+    if (seenOrderIds.current === null) {
+      seenOrderIds.current = currentIds;
+      return;
+    }
+    const newOnes = orders.filter((o) => !seenOrderIds.current.has(o.id));
+    seenOrderIds.current = currentIds;
+    if (!newOnes.length) return;
+
+    // Kalau tablet ini di-filter ke 1 station tertentu, hanya alert kalau
+    // order barunya memang ada item untuk station itu.
+    const relevant = stationFilter === 'all'
+      ? newOnes
+      : newOnes.filter((o) => o.items.some((i) => i.station_id === stationFilter));
+    if (!relevant.length) return;
+
+    if (soundOn && audioCtxRef.current) {
+      beep(audioCtxRef.current);
+      speak(relevant.length > 1 ? 'New orders coming!' : 'New order coming!');
+    }
+  }, [orders, soundOn, stationFilter]);
+
   async function setItemStatus(itemId, status) {
     await fetch(`/api/order-items/${itemId}`, {
       method: 'PATCH',
@@ -90,7 +160,12 @@ function KitchenPage() {
           <h1 className="title">🍳 Kitchen Display</h1>
           <p className="muted small">Auto-refresh tiap 5 detik · 1 printer untuk 3 station</p>
         </div>
-        <Link href="/" className="btn">← Beranda</Link>
+        <div className="row no-print">
+          <button className={`btn ${soundOn ? 'btn-green' : 'btn-brand'}`} onClick={enableSound}>
+            {soundOn ? '🔊 Suara Aktif' : '🔔 Aktifkan Suara'}
+          </button>
+          <Link href="/" className="btn">← Beranda</Link>
+        </div>
       </div>
 
       <div className="row no-print" style={{ flexWrap: 'wrap', marginBottom: 14 }}>

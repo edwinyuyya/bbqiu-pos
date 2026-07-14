@@ -299,3 +299,22 @@ create policy "allow all petty_cash" on petty_cash for all using (true) with che
 
 grant select, insert, update, delete on suppliers, petty_cash to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  RESEP / BOM (Bill of Materials) - potong stok bahan otomatis
+-- ============================================================
+create table if not exists recipe_items (
+  id                 uuid default gen_random_uuid() primary key,
+  menu_item_id       uuid references menu_items(id) on delete cascade,
+  inventory_item_id  uuid references inventory_items(id) on delete cascade,
+  qty                numeric not null default 0,  -- kebutuhan bahan per 1 porsi menu (satuan ikut inventory_item.unit)
+  created_at         timestamptz default now()
+);
+create index if not exists idx_recipe_menu on recipe_items(menu_item_id);
+
+alter table recipe_items enable row level security;
+drop policy if exists "allow all recipe_items" on recipe_items;
+create policy "allow all recipe_items" on recipe_items for all using (true) with check (true);
+
+grant select, insert, update, delete on recipe_items to anon, authenticated;
+notify pgrst, 'reload schema';

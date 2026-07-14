@@ -41,6 +41,7 @@ function AdminPage() {
   const [tables, setTables] = useState([]);
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
@@ -48,16 +49,18 @@ function AdminPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const [s, t, c, m] = await Promise.all([
+    const [s, t, c, m, invRes] = await Promise.all([
       supabase.from('stations').select('*').order('sort_order'),
       supabase.from('tables').select('*').order('table_number'),
       supabase.from('categories').select('*').order('sort_order'),
       supabase.from('menu_items').select('*').order('sort_order'),
+      fetch('/api/inventory').then((r) => r.json()).catch(() => ({ items: [] })),
     ]);
     setStations(s.data || []);
     setTables(t.data || []);
     setCategories(c.data || []);
     setItems(m.data || []);
+    setInventory(invRes.items || []);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -83,7 +86,7 @@ function AdminPage() {
         <TablesTab tables={tables} origin={origin} reload={load} />
       )}
       {tab === 'menu' && (
-        <MenuTab items={items} categories={categories} stations={stations} reload={load} />
+        <MenuTab items={items} categories={categories} stations={stations} inventory={inventory} reload={load} />
       )}
     </div>
   );
@@ -155,12 +158,13 @@ function TablesTab({ tables, origin, reload }) {
   );
 }
 
-function MenuTab({ items, categories, stations, reload }) {
+function MenuTab({ items, categories, stations, inventory, reload }) {
   const EMPTY = { name: '', price: '', category_id: '', station_id: '', description: '', image_url: '', daily_qty: '' };
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY);
+  const [recipeFor, setRecipeFor] = useState(null); // menu item yang sedang dibuka resepnya
 
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
@@ -325,14 +329,79 @@ function MenuTab({ items, categories, stations, reload }) {
                     {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   <button className="btn btn-brand" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => startEdit(it)}>✏️ Edit</button>
+                  <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => setRecipeFor(recipeFor === it.id ? null : it.id)}>🧪 Resep</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => toggle(it)}>{it.available ? 'Set habis' : 'Set tersedia'}</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => del(it)}>Hapus</button>
                 </div>
+                {recipeFor === it.id && <RecipeEditor menuItem={it} inventory={inventory} />}
               </>
             )}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Editor Resep/BOM per menu ---------- */
+function RecipeEditor({ menuItem, inventory }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [invId, setInvId] = useState('');
+  const [qty, setQty] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const invById = useMemo(() => Object.fromEntries(inventory.map((i) => [i.id, i])), [inventory]);
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/recipes?menu_item_id=${menuItem.id}`);
+    const d = await r.json();
+    setRows(d.recipe || []);
+    setLoading(false);
+  }, [menuItem.id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function add() {
+    if (!invId || !qty || Number(qty) <= 0) return;
+    setBusy(true);
+    await fetch('/api/recipes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ menu_item_id: menuItem.id, inventory_item_id: invId, qty: Number(qty) }),
+    });
+    setInvId(''); setQty('');
+    await load();
+    setBusy(false);
+  }
+  async function del(id) {
+    await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 10, background: 'rgba(255,255,255,.03)' }}>
+      <div className="h2" style={{ marginBottom: 8, fontSize: 15 }}>🧪 Resep: {menuItem.name} <span className="muted small">(per 1 porsi)</span></div>
+      {loading ? <p className="muted small">Memuat…</p> : (
+        <>
+          <div className="col" style={{ gap: 6 }}>
+            {rows.map((r) => (
+              <div key={r.id} className="between small">
+                <span>{r.inventory_items?.name || '(bahan dihapus)'} — {r.qty} {r.inventory_items?.unit}</span>
+                <button className="btn" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => del(r.id)}>Hapus</button>
+              </div>
+            ))}
+            {rows.length === 0 && <p className="muted small" style={{ margin: 0 }}>Belum ada bahan. Menu ini tidak akan memotong stok apapun.</p>}
+          </div>
+          <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+            <select className="select" style={{ flex: 1, minWidth: 160 }} value={invId} onChange={(e) => setInvId(e.target.value)}>
+              <option value="">— Pilih bahan —</option>
+              {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
+            </select>
+            <input className="input" type="number" style={{ width: 90 }} placeholder="Qty" value={qty} onChange={(e) => setQty(e.target.value)} />
+            <span className="muted small" style={{ alignSelf: 'center' }}>{invId ? invById[invId]?.unit : ''}</span>
+            <button className="btn btn-brand" disabled={busy} onClick={add}>Tambah</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -79,6 +79,29 @@ export async function POST(req) {
     });
   }
 
+  // 2b) Cek resep/BOM: pastikan stok bahan cukup, blokir order kalau kurang
+  const { data: recipeRows } = await db
+    .from('recipe_items')
+    .select('menu_item_id, qty, inventory_items(id, name, unit, stock_qty)')
+    .in('menu_item_id', ids);
+
+  const neededByInv = {}; // inventory_item_id -> { need, name, unit, stock_qty }
+  for (const r of recipeRows || []) {
+    const orderedQty = qtyByMenu[r.menu_item_id] || 0;
+    const inv = r.inventory_items;
+    if (!orderedQty || !inv) continue;
+    const need = Number(r.qty) * orderedQty;
+    if (!neededByInv[inv.id]) neededByInv[inv.id] = { need: 0, name: inv.name, unit: inv.unit, stock_qty: Number(inv.stock_qty) };
+    neededByInv[inv.id].need += need;
+  }
+  for (const n of Object.values(neededByInv)) {
+    if (n.need > n.stock_qty)
+      return NextResponse.json(
+        { error: `Stok "${n.name}" tidak cukup (tersedia ${n.stock_qty} ${n.unit}, butuh ${n.need} ${n.unit}).` },
+        { status: 400 }
+      );
+  }
+
   // 3) Hitung total
   const subtotal = lineItems.reduce((s, l) => s + l.price * l.qty, 0);
   const tax = Math.round((subtotal * TAX_PERCENT) / 100);
@@ -125,6 +148,23 @@ export async function POST(req) {
     const patch = { daily_qty: left };
     if (left <= 0) patch.available = false; // habis -> otomatis tutup
     await db.from('menu_items').update(patch).eq('id', m.id);
+  }
+
+  // 8) Potong stok bahan otomatis sesuai resep (BOM)
+  const invIds = Object.keys(neededByInv);
+  if (invIds.length) {
+    for (const invId of invIds) {
+      const n = neededByInv[invId];
+      await db.from('inventory_items').update({ stock_qty: n.stock_qty - n.need }).eq('id', invId);
+    }
+    await db.from('stock_movements').insert(
+      invIds.map((invId) => ({
+        item_id: invId,
+        type: 'out',
+        qty: neededByInv[invId].need,
+        note: `Resep otomatis: Order #${order.order_no}`,
+      }))
+    );
   }
 
   return NextResponse.json({ ok: true, order_id: order.id, order_no: order.order_no });

@@ -377,6 +377,11 @@ function RecipeEditor({ menuItem, inventory }) {
     load();
   }
 
+  const hpp = rows.reduce((s, r) => s + Number(r.qty) * Number(r.inventory_items?.cost_price || 0), 0);
+  const price = Number(menuItem.price) || 0;
+  const margin = price - hpp;
+  const marginPct = price > 0 ? Math.round((margin / price) * 100) : null;
+
   return (
     <div className="card" style={{ marginTop: 10, background: 'rgba(255,255,255,.03)' }}>
       <div className="h2" style={{ marginBottom: 8, fontSize: 15 }}>🧪 Resep: {menuItem.name} <span className="muted small">(per 1 porsi)</span></div>
@@ -385,12 +390,29 @@ function RecipeEditor({ menuItem, inventory }) {
           <div className="col" style={{ gap: 6 }}>
             {rows.map((r) => (
               <div key={r.id} className="between small">
-                <span>{r.inventory_items?.name || '(bahan dihapus)'} — {r.qty} {r.inventory_items?.unit}</span>
+                <span>
+                  {r.inventory_items?.name || '(bahan dihapus)'} — {r.qty} {r.inventory_items?.unit}
+                  {r.inventory_items?.cost_price != null && (
+                    <span className="muted"> · {rupiah(Number(r.qty) * Number(r.inventory_items.cost_price))}</span>
+                  )}
+                </span>
                 <button className="btn" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => del(r.id)}>Hapus</button>
               </div>
             ))}
             {rows.length === 0 && <p className="muted small" style={{ margin: 0 }}>Belum ada bahan. Menu ini tidak akan memotong stok apapun.</p>}
           </div>
+          {rows.length > 0 && (
+            <div className="card" style={{ marginTop: 10, padding: '8px 12px' }}>
+              <div className="between small"><span className="muted">HPP (estimasi, harga beli terakhir)</span><span className="bold">{rupiah(hpp)}</span></div>
+              <div className="between small" style={{ marginTop: 4 }}><span className="muted">Harga jual</span><span>{rupiah(price)}</span></div>
+              <div className="between small" style={{ marginTop: 4 }}>
+                <span className="muted">Margin</span>
+                <span className="bold" style={{ color: margin >= 0 ? '#5ee996' : '#ff8585' }}>
+                  {rupiah(margin)}{marginPct != null ? ` (${marginPct}%)` : ''}
+                </span>
+              </div>
+            </div>
+          )}
           <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
             <select className="select" style={{ flex: 1, minWidth: 160 }} value={invId} onChange={(e) => setInvId(e.target.value)}>
               <option value="">— Pilih bahan —</option>

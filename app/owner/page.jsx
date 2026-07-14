@@ -74,8 +74,13 @@ function OwnerInner() {
             {stat('Total order', data.orders_count, `${data.unpaid_count} belum bayar`)}
             {stat('Rata-rata/order', rupiah(data.avg_order))}
             {stat('Belanja hari ini', rupiah(data.purchase_value))}
+            {data.hpp_total != null && stat('HPP (estimasi)', rupiah(data.hpp_total), 'harga beli terkini')}
+            {data.gross_margin != null && stat('Margin Kotor', rupiah(data.gross_margin), data.revenue_all ? `${Math.round((data.gross_margin / data.revenue_all) * 100)}%` : null)}
             {data.voids && stat('Void / Batal', `${data.voids.count}×`, rupiah(data.voids.value))}
           </div>
+          <p className="muted small" style={{ marginTop: -4, marginBottom: 4 }}>
+            HPP &amp; margin dihitung dari resep menu × harga beli bahan terakhir — belum termasuk menu tanpa resep.
+          </p>
 
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', marginTop: 12 }}>
             <div className="card">

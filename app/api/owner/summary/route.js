@@ -54,16 +54,18 @@ export async function GET(req) {
     else { pay.cashier += Number(o.total || 0); pay.cashier_count++; }
   });
 
-  // item terjual (per station + terlaris)
+  // item terjual (per station + terlaris) + HPP (fluktuatif, harga beli terkini)
   const ids = live.map((o) => o.id);
   let perStation = { shaokao: 0, maincourse: 0, bar: 0 };
   let topItems = [];
+  let hppTotal = 0;
   if (ids.length) {
     const { data: its } = await db
       .from('order_items')
-      .select('name, qty, price, station_id, order_id')
+      .select('name, qty, price, station_id, order_id, menu_item_id')
       .in('order_id', ids);
     const byName = {};
+    const qtyByMenu = {};
     (its || []).forEach((it) => {
       const val = Number(it.price) * Number(it.qty);
       if (it.station_id && perStation[it.station_id] !== undefined) perStation[it.station_id] += val;
@@ -71,9 +73,26 @@ export async function GET(req) {
       byName[k] = byName[k] || { name: k, qty: 0, value: 0 };
       byName[k].qty += Number(it.qty);
       byName[k].value += val;
+      if (it.menu_item_id) qtyByMenu[it.menu_item_id] = (qtyByMenu[it.menu_item_id] || 0) + Number(it.qty);
     });
     topItems = Object.values(byName).sort((a, b) => b.qty - a.qty).slice(0, 8);
+
+    // HPP: Σ (qty terjual × biaya resep per porsi, dihitung dari harga beli TERKINI tiap bahan)
+    const menuIds = Object.keys(qtyByMenu);
+    if (menuIds.length) {
+      const { data: recipeRows } = await db
+        .from('recipe_items')
+        .select('menu_item_id, qty, inventory_items(cost_price)')
+        .in('menu_item_id', menuIds);
+      const costPerPortion = {};
+      (recipeRows || []).forEach((r) => {
+        const c = Number(r.qty) * Number(r.inventory_items?.cost_price || 0);
+        costPerPortion[r.menu_item_id] = (costPerPortion[r.menu_item_id] || 0) + c;
+      });
+      hppTotal = menuIds.reduce((s, mid) => s + (costPerPortion[mid] || 0) * qtyByMenu[mid], 0);
+    }
   }
+  const grossMargin = revenueAll - hppTotal;
 
   // belanja hari ini (nilai 'in')
   const { data: moves } = await db
@@ -116,6 +135,8 @@ export async function GET(req) {
     payment: pay,
     per_station: perStation,
     top_items: topItems,
+    hpp_total: hppTotal,
+    gross_margin: grossMargin,
     purchase_value: purchaseValue,
     low_stock: lowStock,
     inventory_count: (inv || []).length,

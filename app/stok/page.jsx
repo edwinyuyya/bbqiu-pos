@@ -111,6 +111,9 @@ function Receive({ items, reload }) {
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))' }}>
         {filtered.map((it) => {
           const inCart = Number(cart[it.id]) || 0;
+          const isGram = it.unit === 'gram';
+          const step1 = isGram ? 100 : 1;
+          const step2 = isGram ? 500 : 5;
           return (
             <div key={it.id} className="card" style={inCart ? { borderColor: 'var(--green)' } : null}>
               <div className="between">
@@ -121,11 +124,11 @@ function Receive({ items, reload }) {
                 <span className="badge">{it.unit}</span>
               </div>
               <div className="row" style={{ marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button className="btn" onClick={() => add(it.id, 1)} style={{ fontSize: 16, fontWeight: 800 }}>+1</button>
-                <button className="btn" onClick={() => add(it.id, 5)} style={{ fontSize: 16, fontWeight: 800 }}>+5</button>
+                <button className="btn" onClick={() => add(it.id, step1)} style={{ fontSize: 16, fontWeight: 800 }}>+{step1}</button>
+                <button className="btn" onClick={() => add(it.id, step2)} style={{ fontSize: 16, fontWeight: 800 }}>+{step2}</button>
                 <input className="input" type="number" inputMode="decimal" style={{ width: 90 }} placeholder="qty"
                   value={inCart || ''} onChange={(e) => setQty(it.id, e.target.value)} />
-                {inCart > 0 && <button className="btn" onClick={() => add(it.id, -1)}>−</button>}
+                {inCart > 0 && <button className="btn" onClick={() => add(it.id, -step1)}>−</button>}
               </div>
               {inCart > 0 && (
                 <div style={{ marginTop: 8 }}>

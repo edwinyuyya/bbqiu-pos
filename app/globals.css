@@ -1,15 +1,15 @@
 :root {
-  --bg: #0f1115;
-  --card: #1a1d24;
-  --card2: #22262f;
-  --line: #2c313c;
-  --text: #e8eaed;
-  --muted: #9aa3b2;
-  --brand: #ff5a36;
-  --brand2: #ffb020;
-  --green: #28c46b;
-  --red: #ef4444;
-  --blue: #3b82f6;
+  --bg: #f6f2ec;      /* warm light */
+  --card: #ffffff;
+  --card2: #efe9e0;
+  --line: #e3dbce;
+  --text: #2a2019;
+  --muted: #7c7266;
+  --brand: #e0552c;
+  --brand2: #d99411;
+  --green: #1f9d57;
+  --red: #dc2626;
+  --blue: #2563eb;
 }
 
 * { box-sizing: border-box; }
@@ -53,7 +53,7 @@ a { color: inherit; text-decoration: none; }
 .btn:hover { filter: brightness(1.15); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-brand { background: var(--brand); border-color: var(--brand); color: #fff; }
-.btn-green { background: var(--green); border-color: var(--green); color: #04210f; }
+.btn-green { background: var(--green); border-color: var(--green); color: #fff; }
 .btn-blue  { background: var(--blue);  border-color: var(--blue);  color: #fff; }
 .btn-block { width: 100%; }
 
@@ -61,10 +61,10 @@ a { color: inherit; text-decoration: none; }
   display: inline-block; padding: 3px 10px; border-radius: 999px;
   font-size: 12px; font-weight: 700; background: var(--card2); border: 1px solid var(--line);
 }
-.badge-green { background: rgba(40,196,107,.15); color: #5ee996; border-color: transparent; }
-.badge-red   { background: rgba(239,68,68,.15); color: #ff8585; border-color: transparent; }
-.badge-amber { background: rgba(255,176,32,.15); color: #ffcf6a; border-color: transparent; }
-.badge-blue  { background: rgba(59,130,246,.15); color: #8fbaff; border-color: transparent; }
+.badge-green { background: rgba(31,157,87,.14); color: #16794a; border-color: transparent; }
+.badge-red   { background: rgba(220,38,38,.12); color: #c0271f; border-color: transparent; }
+.badge-amber { background: rgba(217,148,17,.16); color: #9a6b06; border-color: transparent; }
+.badge-blue  { background: rgba(37,99,235,.12); color: #1d4ed8; border-color: transparent; }
 
 .input, .select, .textarea {
   width: 100%; background: var(--card2); color: var(--text);
@@ -92,21 +92,39 @@ a { color: inherit; text-decoration: none; }
   padding: 12px 0; border-top: 1px solid var(--line); margin-top: 12px;
 }
 
-/* ---------- Print ticket ---------- */
+/* ---------- Print ticket (thermal 58mm) ---------- */
 @media print {
-  body { background: #fff; color: #000; }
+  @page { size: 58mm auto; margin: 0; }
+  html, body { background: #fff; color: #000; margin: 0; padding: 0; }
   .no-print { display: none !important; }
-  .ticket { page-break-after: always; }
+  .ticket { page-break-after: always; border: 0; margin: 0 auto; width: 58mm; }
+  .container-sm, .container { padding: 0; max-width: none; }
 }
 .ticket {
-  background: #fff; color: #000; width: 280px; margin: 0 auto 18px;
-  padding: 12px; font-family: 'Courier New', monospace; font-size: 13px;
-  border: 1px dashed #999;
+  background: #fff; color: #000; width: 58mm; margin: 0 auto 18px;
+  padding: 2mm 3mm; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.35;
+  border: 1px dashed #bbb;
 }
-.ticket h3 { margin: 0 0 4px; text-align: center; }
-.ticket .line { border-top: 1px dashed #000; margin: 6px 0; }
-.ticket .item { display: flex; justify-content: space-between; }
+.ticket .big { font-size: 15px; font-weight: 800; text-align: center; }
+.ticket h3 { margin: 0 0 2px; text-align: center; font-size: 13px; }
+.ticket .line { border-top: 1px dashed #000; margin: 5px 0; }
+.ticket .item { display: flex; justify-content: space-between; gap: 6px; }
+.ticket .rgt { text-align: right; }
+.ticket .ctr { text-align: center; }
 .cut { text-align: center; color: #888; font-size: 11px; margin: 4px 0; }
+
+/* ---------- Footer Nexora ---------- */
+.site-footer {
+  text-align: center; padding: 22px 16px 30px; margin-top: 24px;
+  color: var(--muted); font-size: 12px;
+}
+.site-footer .nx {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 4px;
+  font-weight: 800; letter-spacing: 2px; color: var(--text); font-size: 13px;
+}
+.site-footer .nx svg { display: block; }
+.cust-page .site-footer { color: #e7d3b5; }
+.cust-page .site-footer .nx { color: #fff; }
 
 /* ===== Tema pelanggan (copper oriental) ===== */
 .cust-page {

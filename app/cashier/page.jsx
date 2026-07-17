@@ -230,7 +230,10 @@ function CashierPage() {
                       Batalkan
                     </button>
                   </div>
-                  <Link href={`/kitchen/print/${o.id}`} target="_blank" className="btn btn-block">🖨️ Cetak ulang</Link>
+                  <div className="row">
+                    <Link href={`/kitchen/print/${o.id}`} target="_blank" className="btn btn-block">🖨️ Struk Dapur</Link>
+                    <Link href={`/nota/${o.id}`} target="_blank" className="btn btn-block">🧾 Nota</Link>
+                  </div>
                 </div>
               )}
             </div>

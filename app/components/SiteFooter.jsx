@@ -1,16 +1,12 @@
-// Footer global. Ganti <NexoraMark/> dengan file logo asli bila sudah ada
-// (mis. <img src="/nexora-logo.png" .../>).
-function NexoraMark() {
+// Footer global. Rekreasi vektor logo Nexora (3 bar ungu + wordmark) supaya
+// tajam di semua ukuran. Ganti dengan <img> ke file logo asli bila sudah
+// tersedia sebagai file (bukan sekadar tempel di chat).
+function NexoraMark({ height = 18 }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="nx-g" x1="0" y1="0" x2="24" y2="24">
-          <stop offset="0" stopColor="#e0552c" />
-          <stop offset="1" stopColor="#d99411" />
-        </linearGradient>
-      </defs>
-      <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="url(#nx-g)" />
-      <path d="M7 17V7l10 10V7" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <svg height={height} viewBox="0 0 40 32" aria-hidden="true" style={{ display: 'block' }}>
+      <rect x="4" y="0" width="32" height="8" rx="4" fill="#d9c9f5" />
+      <rect x="2" y="12" width="34" height="8" rx="4" fill="#9b6fe0" />
+      <rect x="0" y="24" width="36" height="8" rx="4" fill="#6c2bd9" />
     </svg>
   );
 }

@@ -1,5 +1,6 @@
 import { supabaseServer } from '../../../../lib/supabaseServer';
 import PrintControls from './PrintControls';
+import BbqiuLogoMark from '../../../components/BbqiuLogoMark';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,6 @@ export default async function PrintPage({ params }) {
   if (others.length) grouped.push({ id: 'other', name: 'LAINNYA', items: others });
 
   const activeStations = grouped.filter((g) => g.items.length);
-  const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran';
 
   return (
     <div className="container-sm" style={{ paddingTop: 16 }}>
@@ -62,8 +62,8 @@ export default async function PrintPage({ params }) {
       {activeStations.map((s, idx) => (
         <div key={s.id}>
           <div className="ticket">
-            <h3>{merchant}</h3>
-            <h3 style={{ fontSize: 16 }}>{s.name}</h3>
+            <BbqiuLogoMark width={120} withTagline={false} />
+            <h3 style={{ fontSize: 16, marginTop: 4 }}>{s.name}</h3>
             <div className="line" />
             <div className="item"><span>Order</span><span>#{order.order_no}</span></div>
             <div className="item"><span>Meja</span><span>{order.table_number}</span></div>

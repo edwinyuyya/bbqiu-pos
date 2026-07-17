@@ -1,5 +1,6 @@
 import { supabaseServer } from '../../../lib/supabaseServer';
 import PrintNota from './PrintNota';
+import BbqiuLogoMark from '../../components/BbqiuLogoMark';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +29,8 @@ export default async function NotaPage({ params }) {
     <div className="container-sm" style={{ paddingTop: 16 }}>
       <PrintNota />
       <div className="ticket">
-        <div className="big">{merchant}</div>
-        <div className="ctr small">Grill · Suki · Shao Kao</div>
-        <div className="ctr small">SOLO</div>
+        <BbqiuLogoMark width={150} />
+        <div className="ctr small" style={{ marginTop: 2 }}>SOLO</div>
         <div className="line" />
         <div className="item"><span>No. Order</span><span>#{order.order_no}</span></div>
         <div className="item"><span>Meja</span><span>{order.table_number}</span></div>

@@ -26,9 +26,14 @@ export default function Home() {
       desc: 'Update stok saat barang datang (tap / scan barcode), opname, low-stock.',
     },
     {
+      href: '/waiter',
+      title: '🧑‍🍳 Waiter',
+      desc: 'Kelola meja/QR & tandai menu habis. Tidak bisa lihat harga beli/HPP.',
+    },
+    {
       href: '/admin',
       title: '⚙️ Admin',
-      desc: 'Kelola menu, meja, dan cetak QR code meja.',
+      desc: 'Kelola menu, harga, resep/HPP, meja, dan cetak QR code meja.',
     },
   ];
 

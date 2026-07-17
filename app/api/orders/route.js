@@ -79,7 +79,9 @@ export async function POST(req) {
     });
   }
 
-  // 2b) Cek resep/BOM: pastikan stok bahan cukup, blokir order kalau kurang
+  // 2b) Hitung kebutuhan bahan sesuai resep/BOM (untuk dipotong dari stok).
+  // Mode "boleh minus": order TIDAK diblokir walau stok kurang; stok boleh negatif
+  // dan akan muncul di alert stok menipis untuk direkonsiliasi.
   const { data: recipeRows } = await db
     .from('recipe_items')
     .select('menu_item_id, qty, inventory_items(id, name, unit, stock_qty)')
@@ -93,13 +95,6 @@ export async function POST(req) {
     const need = Number(r.qty) * orderedQty;
     if (!neededByInv[inv.id]) neededByInv[inv.id] = { need: 0, name: inv.name, unit: inv.unit, stock_qty: Number(inv.stock_qty) };
     neededByInv[inv.id].need += need;
-  }
-  for (const n of Object.values(neededByInv)) {
-    if (n.need > n.stock_qty)
-      return NextResponse.json(
-        { error: `Stok "${n.name}" tidak cukup (tersedia ${n.stock_qty} ${n.unit}, butuh ${n.need} ${n.unit}).` },
-        { status: 400 }
-      );
   }
 
   // 3) Hitung total

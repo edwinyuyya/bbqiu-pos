@@ -55,6 +55,7 @@ a { color: inherit; text-decoration: none; }
 .btn-brand { background: var(--brand); border-color: var(--brand); color: #fff; }
 .btn-green { background: var(--green); border-color: var(--green); color: #fff; }
 .btn-blue  { background: var(--blue);  border-color: var(--blue);  color: #fff; }
+.btn-red   { background: var(--red);   border-color: var(--red);   color: #fff; }
 .btn-block { width: 100%; }
 
 .badge {

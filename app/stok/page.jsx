@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import PinGate from '../components/PinGate';
 import BarcodeScanner from './BarcodeScanner';
+import SupplierField from './SupplierField';
+import ProduksiBatch from './ProduksiBatch';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 // Satuan terkecil didahulukan (gram, ml, pcs, sachet, porsi, botol)
@@ -44,6 +46,7 @@ function StokInner() {
         <button className={`btn ${tab === 'opname' ? 'btn-brand' : ''}`} onClick={() => setTab('opname')}>🧮 Opname Massal</button>
         <button className={`btn ${tab === 'add' ? 'btn-brand' : ''}`} onClick={() => setTab('add')}>+ Barang</button>
         <button className={`btn ${tab === 'supplier' ? 'btn-brand' : ''}`} onClick={() => setTab('supplier')}>🚚 Supplier</button>
+        <button className={`btn ${tab === 'batch' ? 'btn-brand' : ''}`} onClick={() => setTab('batch')}>🏷️ Produksi & Batch</button>
       </div>
 
       {loading ? <p className="muted">Memuat…</p> : (
@@ -53,6 +56,7 @@ function StokInner() {
           {tab === 'opname' && <OpnameMassal items={items} reload={load} />}
           {tab === 'add' && <AddItem reload={load} onDone={() => setTab('stock')} suppliers={suppliers} />}
           {tab === 'supplier' && <SupplierTab suppliers={suppliers} reload={loadSuppliers} />}
+          {tab === 'batch' && <ProduksiBatch items={items} suppliers={suppliers} reload={load} />}
         </>
       )}
     </div>
@@ -157,37 +161,6 @@ function Receive({ items, reload }) {
       )}
 
       {scan && <BarcodeScanner onDetected={onScan} onClose={() => setScan(false)} />}
-    </div>
-  );
-}
-
-// Field supplier dengan autocomplete dari daftar terdaftar.
-// Kalau nama yang diketik TIDAK ada di daftar -> anggap "custom/dadakan",
-// wajib isi No. Nota Pembelian sebagai verifikasi.
-function SupplierField({ suppliers, value, invoiceNo, onChangeSupplier, onChangeInvoice }) {
-  const names = useMemo(() => suppliers.map((s) => s.name), [suppliers]);
-  const isCustom = value && value.trim() && !names.some((n) => n.toLowerCase() === value.trim().toLowerCase());
-  return (
-    <div className="col" style={{ gap: 6 }}>
-      <input
-        className="input" placeholder="Supplier (ketik atau pilih dari daftar)"
-        list="supplier-suggestions" value={value || ''}
-        onChange={(e) => onChangeSupplier(e.target.value)}
-      />
-      <datalist id="supplier-suggestions">
-        {names.map((n) => <option key={n} value={n} />)}
-      </datalist>
-      {isCustom && (
-        <div className="card" style={{ padding: '8px 10px', borderColor: 'var(--red)' }}>
-          <div className="small" style={{ color: '#ff8585', marginBottom: 4 }}>
-            ⚠️ Supplier belum terdaftar (dadakan) — wajib isi No. Nota untuk verifikasi.
-          </div>
-          <input
-            className="input" placeholder="No. Nota Pembelian *"
-            value={invoiceNo || ''} onChange={(e) => onChangeInvoice(e.target.value)}
-          />
-        </div>
-      )}
     </div>
   );
 }

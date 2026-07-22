@@ -318,3 +318,38 @@ create policy "allow all recipe_items" on recipe_items for all using (true) with
 
 grant select, insert, update, delete on recipe_items to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  BATCH / LOT TRACKING + FIFO (bumbu produksi & daging gelondongan)
+-- ============================================================
+create table if not exists stock_batches (
+  id                uuid default gen_random_uuid() primary key,
+  inventory_item_id uuid references inventory_items(id) on delete cascade,
+  batch_code        text not null unique,          -- isi QR label: BATCH:<batch_code>
+  source_type       text not null default 'produksi', -- 'produksi' (bumbu) | 'penerimaan' (daging/gelondongan)
+  produced_date     date not null,                   -- dasar urutan FIFO, TIDAK berubah saat repack
+  initial_qty       numeric not null default 0,
+  qty_remaining     numeric not null default 0,
+  unit              text,
+  status            text not null default 'active',  -- active | depleted | repacked | void
+  parent_batch_id   uuid references stock_batches(id), -- diisi di batch ANAK hasil repack
+  supplier          text,
+  invoice_no        text,
+  cost_price        numeric,
+  note              text,
+  created_by        text,
+  created_at        timestamptz default now(),
+  consumed_at       timestamptz
+);
+create index if not exists idx_batches_item_status on stock_batches(inventory_item_id, status, produced_date);
+create index if not exists idx_batches_code on stock_batches(batch_code);
+create index if not exists idx_batches_parent on stock_batches(parent_batch_id);
+
+alter table inventory_items add column if not exists batch_tracked boolean default false;
+
+alter table stock_batches enable row level security;
+drop policy if exists "allow all stock_batches" on stock_batches;
+create policy "allow all stock_batches" on stock_batches for all using (true) with check (true);
+
+grant select, insert, update, delete on stock_batches to anon, authenticated;
+notify pgrst, 'reload schema';

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
+import TakeOrder from './TakeOrder';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -152,6 +153,7 @@ function CashierPage() {
 
       <div className="row" style={{ marginBottom: 14 }}>
         <button className={`btn ${mainTab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setMainTab('bill')}>🧾 Bill</button>
+        <button className={`btn ${mainTab === 'takeorder' ? 'btn-brand' : ''}`} onClick={() => setMainTab('takeorder')}>➕ Input Order</button>
         <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Petty Cash</button>
       </div>
 
@@ -163,6 +165,7 @@ function CashierPage() {
       />
 
       {mainTab === 'pettycash' && <PettyCashTab />}
+      {mainTab === 'takeorder' && <TakeOrder onCreated={() => setMainTab('bill')} />}
 
       {mainTab === 'bill' && (
       <>

@@ -1,11 +1,42 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
 import TakeOrder from './TakeOrder';
+
+// Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
+function beep(ctx) {
+  const tone = (freq, start, dur) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start(ctx.currentTime + start);
+    o.stop(ctx.currentTime + start + dur + 0.05);
+  };
+  tone(880, 0, 0.16);
+  tone(1046, 0.18, 0.2);
+}
+
+function speak(text) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'id-ID';
+    u.rate = 1;
+    u.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch {}
+}
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -47,6 +78,53 @@ function CashierPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
+  const [calls, setCalls] = useState([]);
+  const [soundOn, setSoundOn] = useState(false);
+  const audioCtxRef = useRef(null);
+  const seenCallIds = useRef(null);
+
+  const loadCalls = useCallback(async () => {
+    const r = await fetch('/api/waiter-calls?status=pending');
+    const d = await r.json();
+    setCalls(d.calls || []);
+  }, []);
+  useEffect(() => {
+    loadCalls();
+    const t = setInterval(loadCalls, 5000);
+    return () => clearInterval(t);
+  }, [loadCalls]);
+
+  // Alert suara saat ada panggilan waiter baru (pola sama dengan Kitchen Display/Waiter).
+  useEffect(() => {
+    const currentIds = new Set(calls.map((c) => c.id));
+    if (seenCallIds.current === null) { seenCallIds.current = currentIds; return; }
+    const newOnes = calls.filter((c) => !seenCallIds.current.has(c.id));
+    seenCallIds.current = currentIds;
+    if (!newOnes.length) return;
+    if (soundOn && audioCtxRef.current) {
+      beep(audioCtxRef.current);
+      const t = `Meja ${newOnes[0].table_number} memanggil`;
+      speak(`${t}. ${t}.`);
+    }
+  }, [calls, soundOn]);
+
+  function enableSound() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      audioCtxRef.current = new Ctx();
+      beep(audioCtxRef.current);
+      speak('Suara aktif');
+      setSoundOn(true);
+    } catch {}
+  }
+
+  async function handledCall(call) {
+    await fetch(`/api/waiter-calls/${call.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'handled' }),
+    });
+    loadCalls();
+  }
 
   const load = useCallback(async () => {
     const statuses = tab === 'active'
@@ -146,10 +224,29 @@ function CashierPage() {
           <p className="muted small">Konfirmasi pembayaran &amp; tutup bill</p>
         </div>
         <div className="row">
+          <button className={`btn ${soundOn ? 'btn-green' : 'btn-brand'}`} onClick={enableSound}>
+            {soundOn ? '🔊 Suara Aktif' : '🔔 Aktifkan Suara'}
+          </button>
           <button className="btn" disabled={busy === 'close'} onClick={closeShift}>🔒 Tutup Kasir</button>
           <Link href="/" className="btn">← Beranda</Link>
         </div>
       </div>
+
+      {calls.length > 0 && (
+        <div className="col" style={{ marginBottom: 14, gap: 8 }}>
+          {calls.map((c) => (
+            <div key={c.id} className="card" style={{ borderColor: 'var(--red)' }}>
+              <div className="between">
+                <div>
+                  <span className="bold">🔔 Meja {c.table_number} memanggil</span>
+                  {c.reason && <span className="muted small"> · {c.reason}</span>}
+                </div>
+                <button className="btn btn-green" onClick={() => handledCall(c)}>✅ Ditangani</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="row" style={{ marginBottom: 14 }}>
         <button className={`btn ${mainTab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setMainTab('bill')}>🧾 Bill</button>

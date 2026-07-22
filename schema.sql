@@ -353,3 +353,25 @@ create policy "allow all stock_batches" on stock_batches for all using (true) wi
 
 grant select, insert, update, delete on stock_batches to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  PANGGIL WAITER (tombol pelanggan minta bantuan staf)
+-- ============================================================
+create table if not exists waiter_calls (
+  id            uuid default gen_random_uuid() primary key,
+  table_id      uuid references tables(id),
+  table_number  text,
+  reason        text,                       -- alasan singkat (opsional)
+  status        text not null default 'pending', -- pending | handled
+  handled_by    text,
+  created_at    timestamptz default now(),
+  handled_at    timestamptz
+);
+create index if not exists idx_waitercalls_status on waiter_calls(status, created_at);
+
+alter table waiter_calls enable row level security;
+drop policy if exists "allow all waiter_calls" on waiter_calls;
+create policy "allow all waiter_calls" on waiter_calls for all using (true) with check (true);
+
+grant select, insert, update, delete on waiter_calls to anon, authenticated;
+notify pgrst, 'reload schema';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CallWaiterButton from '../../components/CallWaiterButton';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -50,6 +51,7 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
 
   return (
     <div className="cust-page">
+    <CallWaiterButton tableId={order.table_id} tableNumber={order.table_number} />
     <div className="container-sm" style={{ paddingTop: 8, paddingBottom: 40 }}>
       <div className="brand-hero" style={{ paddingBottom: 0 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

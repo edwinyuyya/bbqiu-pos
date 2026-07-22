@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import CallWaiterButton from '../../components/CallWaiterButton';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -90,6 +91,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
 
   return (
     <div className="cust-page">
+    <CallWaiterButton tableId={table.id} tableNumber={table.table_number} />
     <div className="container-sm" style={{ paddingBottom: 90 }}>
       <div className="brand-hero">
         {/* eslint-disable-next-line @next/next/no-img-element */}

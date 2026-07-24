@@ -9,6 +9,9 @@ import AvailabilityTab from './AvailabilityTab';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
+  // Browser (terutama tablet/Android) sering auto-suspend AudioContext
+  // kalau tab lama tidak ada interaksi — resume dulu supaya tetap bunyi.
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   const tone = (freq, start, dur) => {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -29,6 +32,7 @@ function beep(ctx) {
 function speak(text) {
   try {
     if (!('speechSynthesis' in window)) return;
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'id-ID';
     u.rate = 1;
@@ -79,6 +83,10 @@ function WaiterPage() {
 
   // Alert suara saat ada panggilan baru (pola sama dengan Kitchen Display).
   useEffect(() => {
+    // Jaga-jaga: browser bisa auto-suspend AudioContext kalau tab lama idle.
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
     const currentIds = new Set(calls.map((c) => c.id));
     if (seenCallIds.current === null) { seenCallIds.current = currentIds; return; }
     const newOnes = calls.filter((c) => !seenCallIds.current.has(c.id));

@@ -1,6 +1,5 @@
 import QRCode from 'qrcode';
 import { supabaseServer } from '../../../lib/supabaseServer';
-import BbqiuLogoMark from '../../components/BbqiuLogoMark';
 import BatchPrintClient from './BatchPrintClient';
 
 export const dynamic = 'force-dynamic';
@@ -34,5 +33,5 @@ export default async function BatchPrintPage({ searchParams }) {
     }))
   );
 
-  return <BatchPrintClient labels={labels} logo={<BbqiuLogoMark width={110} withTagline={false} />} />;
+  return <BatchPrintClient labels={labels} />;
 }

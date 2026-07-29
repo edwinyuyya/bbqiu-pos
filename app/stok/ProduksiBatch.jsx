@@ -43,12 +43,14 @@ function ProduksiBumbu({ items, reload }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [printUrl, setPrintUrl] = useState('');
 
   const selected = items.find((i) => i.id === itemId);
 
   async function submit() {
     if (!itemId || !qtyPerPack || Number(qtyPerPack) <= 0) { setMsg('Bahan & qty per pack wajib diisi'); return; }
     setBusy(true);
+    setPrintUrl('');
     const r = await fetch('/api/stock-batches', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'produce', inventory_item_id: itemId, produced_date: date, qty_per_pack: Number(qtyPerPack), pack_count: Number(packCount) || 1, note }),
@@ -57,14 +59,17 @@ function ProduksiBumbu({ items, reload }) {
     if (r.ok) {
       await reload();
       const ids = d.batches.map((b) => b.id).join(',');
-      window.open(`/stok/batch-print?ids=${ids}`, '_blank');
+      const url = `/stok/batch-print?ids=${ids}`;
+      // window.open bisa ke-block browser (tablet) karena ada jeda async;
+      // sediakan juga tombol/link manual di bawah supaya tidak "hilang".
+      window.open(url, '_blank');
+      setPrintUrl(url);
       setQtyPerPack(''); setPackCount('1'); setNote('');
-      setMsg(`✓ ${d.batches.length} pack berhasil dibuat & label dibuka di tab baru`);
+      setMsg(`✓ ${d.batches.length} pack berhasil dibuat.`);
     } else {
       setMsg(d.error || 'Gagal menyimpan');
     }
     setBusy(false);
-    setTimeout(() => setMsg(''), 4000);
   }
 
   return (
@@ -93,6 +98,11 @@ function ProduksiBumbu({ items, reload }) {
         {busy ? 'Menyimpan…' : 'Simpan & Cetak Label'}
       </button>
       {msg && <p className="small" style={{ marginTop: 8 }}>{msg}</p>}
+      {printUrl && (
+        <a href={printUrl} target="_blank" rel="noopener noreferrer" className="btn btn-green btn-block" style={{ marginTop: 8 }}>
+          🖨️ Buka Label untuk Dicetak
+        </a>
+      )}
     </div>
   );
 }
@@ -108,6 +118,7 @@ function TerimaDaging({ items, suppliers, reload }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [printUrl, setPrintUrl] = useState('');
 
   const selected = items.find((i) => i.id === itemId);
   const names = useMemo(() => suppliers.map((s) => s.name), [suppliers]);
@@ -117,6 +128,7 @@ function TerimaDaging({ items, suppliers, reload }) {
     if (!itemId || !qty || Number(qty) <= 0) { setMsg('Bahan & qty wajib diisi'); return; }
     if (isCustom && !invoiceNo.trim()) { setMsg('Supplier belum terdaftar — No. Nota wajib diisi.'); return; }
     setBusy(true);
+    setPrintUrl('');
     const r = await fetch('/api/stock-batches', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'receive_lot', inventory_item_id: itemId, produced_date: date, qty: Number(qty), supplier, invoice_no: invoiceNo, cost_price: costPrice, note }),
@@ -124,14 +136,15 @@ function TerimaDaging({ items, suppliers, reload }) {
     const d = await r.json();
     if (r.ok) {
       await reload();
-      window.open(`/stok/batch-print?ids=${d.batch.id}`, '_blank');
+      const url = `/stok/batch-print?ids=${d.batch.id}`;
+      window.open(url, '_blank');
+      setPrintUrl(url);
       setQty(''); setSupplier(''); setInvoiceNo(''); setCostPrice(''); setNote('');
-      setMsg('✓ Batch gelondongan tersimpan & label dibuka di tab baru');
+      setMsg('✓ Batch gelondongan tersimpan.');
     } else {
       setMsg(d.error || 'Gagal menyimpan');
     }
     setBusy(false);
-    setTimeout(() => setMsg(''), 4000);
   }
 
   return (
@@ -154,6 +167,11 @@ function TerimaDaging({ items, suppliers, reload }) {
         {busy ? 'Menyimpan…' : 'Simpan & Cetak Label'}
       </button>
       {msg && <p className="small" style={{ marginTop: 8 }}>{msg}</p>}
+      {printUrl && (
+        <a href={printUrl} target="_blank" rel="noopener noreferrer" className="btn btn-green btn-block" style={{ marginTop: 8 }}>
+          🖨️ Buka Label untuk Dicetak
+        </a>
+      )}
     </div>
   );
 }
@@ -170,11 +188,12 @@ function ScanPakaiRepack({ reload }) {
   const [newQty, setNewQty] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [printUrl, setPrintUrl] = useState('');
 
   async function lookup(code) {
     setScan(false);
     setLoading(true);
-    setErr(''); setData(null); setMode(null);
+    setErr(''); setData(null); setMode(null); setPrintUrl('');
     try {
       const r = await fetch(`/api/stock-batches/${encodeURIComponent(code)}`);
       const d = await r.json();
@@ -224,8 +243,10 @@ function ScanPakaiRepack({ reload }) {
     const d = await r.json();
     if (r.ok) {
       await reload();
-      window.open(`/stok/batch-print?ids=${d.batch.id}`, '_blank');
-      setMsg('✓ Label baru dibuat & dibuka di tab baru');
+      const url = `/stok/batch-print?ids=${d.batch.id}`;
+      window.open(url, '_blank');
+      setPrintUrl(url);
+      setMsg('✓ Label baru dibuat.');
       setData(null); setMode(null); setNewQty('');
     } else {
       setMsg(d.error || 'Gagal repack');
@@ -303,6 +324,11 @@ function ScanPakaiRepack({ reload }) {
       )}
 
       {msg && <div className="card" style={{ padding: '8px 12px' }}><span className="small">{msg}</span></div>}
+      {printUrl && (
+        <a href={printUrl} target="_blank" rel="noopener noreferrer" className="btn btn-green btn-block">
+          🖨️ Buka Label Baru untuk Dicetak
+        </a>
+      )}
       {scan && <BarcodeScanner onDetected={onDetected} onClose={() => setScan(false)} />}
     </div>
   );

@@ -106,6 +106,13 @@ function Receive({ items, reload }) {
 
   return (
     <div className="col" style={{ paddingBottom: 90 }}>
+      <div className="card" style={{ padding: '8px 12px', borderColor: 'var(--brand)' }}>
+        <p className="muted small" style={{ margin: 0 }}>
+          Tab ini cuma update angka stok, <b>tidak ada cetak label/barcode</b>. Untuk
+          bahan yang perlu label FIFO (daging gelondongan, hasil produksi bumbu),
+          pakai tab <b>🏷️ Produksi & Batch</b> di atas.
+        </p>
+      </div>
       <div className="row">
         <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="btn" onClick={() => setScan(true)}>📷 Scan</button>

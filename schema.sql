@@ -375,3 +375,26 @@ create policy "allow all waiter_calls" on waiter_calls for all using (true) with
 
 grant select, insert, update, delete on waiter_calls to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  LOG KINERJA DAPUR (timer per order: masuk -> diklik selesai)
+-- ============================================================
+create table if not exists kitchen_perf_log (
+  id            uuid default gen_random_uuid() primary key,
+  order_id      uuid references orders(id),
+  order_no      text,
+  table_number  text,
+  started_at    timestamptz not null,   -- orders.created_at
+  completed_at  timestamptz not null default now(),
+  duration_sec  integer not null,
+  item_count    integer,
+  created_at    timestamptz default now()
+);
+create index if not exists idx_kitchenperf_completed on kitchen_perf_log(completed_at);
+
+alter table kitchen_perf_log enable row level security;
+drop policy if exists "allow all kitchen_perf_log" on kitchen_perf_log;
+create policy "allow all kitchen_perf_log" on kitchen_perf_log for all using (true) with check (true);
+
+grant select, insert, update, delete on kitchen_perf_log to anon, authenticated;
+notify pgrst, 'reload schema';

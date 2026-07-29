@@ -117,6 +117,29 @@ export async function GET(req) {
     at: c.created_at,
   }));
 
+  // kinerja dapur (durasi order masuk -> diklik selesai)
+  const { data: perfRaw } = await db
+    .from('kitchen_perf_log')
+    .select('order_no, table_number, duration_sec, item_count, completed_at')
+    .gte('completed_at', startISO)
+    .order('completed_at', { ascending: false });
+  const perfList = perfRaw || [];
+  const avgDurationSec = perfList.length
+    ? Math.round(perfList.reduce((s, p) => s + Number(p.duration_sec), 0) / perfList.length)
+    : 0;
+  const slowest = [...perfList].sort((a, b) => b.duration_sec - a.duration_sec).slice(0, 5);
+  const kitchenPerf = {
+    count: perfList.length,
+    avg_duration_sec: avgDurationSec,
+    slowest: slowest.map((p) => ({
+      order_no: p.order_no,
+      table_number: p.table_number,
+      duration_sec: p.duration_sec,
+      item_count: p.item_count,
+      at: p.completed_at,
+    })),
+  };
+
   // stok menipis
   const { data: inv } = await db
     .from('inventory_items')
@@ -142,5 +165,6 @@ export async function GET(req) {
     inventory_count: (inv || []).length,
     voids,
     closures,
+    kitchen_perf: kitchenPerf,
   });
 }

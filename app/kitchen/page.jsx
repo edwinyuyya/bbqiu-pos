@@ -42,11 +42,21 @@ const STATIONS = [
   { id: 'bar', name: 'Bar Minuman', cls: 'station-bar' },
 ];
 
-function timeAgo(ts) {
-  const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-  if (s < 60) return `${s}s lalu`;
-  const m = Math.floor(s / 60);
-  return `${m}m lalu`;
+// Format durasi berjalan jadi "Xm Ys" (atau "Hj Xm" kalau lewat 1 jam).
+function formatElapsed(ms) {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}j ${m}m`;
+  return `${m}m ${s}s`;
+}
+// <10 menit: aman · 10-20 menit: waspada · >20 menit: lambat
+function elapsedBadgeClass(ms) {
+  const min = ms / 60000;
+  if (min >= 20) return 'badge-red';
+  if (min >= 10) return 'badge-amber';
+  return 'badge-blue';
 }
 
 function KitchenPage() {
@@ -55,8 +65,17 @@ function KitchenPage() {
   const [stationFilter, setStationFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [soundOn, setSoundOn] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [completing, setCompleting] = useState('');
   const audioCtxRef = useRef(null);
   const seenOrderIds = useRef(null); // null = belum pernah load (jangan alert saat pertama buka)
+
+  // Timer berjalan tiap detik supaya durasi order kelihatan hidup, terpisah
+  // dari polling data (5 detik) supaya tetap smooth di antara refresh.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   function enableSound() {
     try {
@@ -146,6 +165,15 @@ function KitchenPage() {
     load();
   }
 
+  // Tandai seluruh order selesai sekaligus + catat durasi (masuk -> selesai)
+  // ke log kinerja dapur untuk penilaian nanti.
+  async function completeOrder(orderId) {
+    setCompleting(orderId);
+    await fetch(`/api/orders/${orderId}/kitchen-complete`, { method: 'POST' });
+    await load();
+    setCompleting('');
+  }
+
   const visibleOrders = useMemo(() => {
     if (stationFilter === 'all') return orders;
     return orders
@@ -201,13 +229,14 @@ function KitchenPage() {
             (i) => !STATIONS.some((s) => s.id === i.station_id)
           );
 
+          const elapsedMs = now - new Date(o.created_at).getTime();
           return (
             <div key={o.id} className="card">
               <div className="between">
                 <div>
                   <span className="bold">#{o.order_no}</span> · Meja {o.table_number}
                 </div>
-                <span className="badge">{timeAgo(o.created_at)}</span>
+                <span className={`badge ${elapsedBadgeClass(elapsedMs)}`}>⏱ {formatElapsed(elapsedMs)}</span>
               </div>
               <div className="row" style={{ marginTop: 6 }}>
                 <span className={`badge ${o.payment_status === 'paid' ? 'badge-green' : 'badge-amber'}`}>
@@ -257,13 +286,22 @@ function KitchenPage() {
                 </div>
               )}
 
-              <Link
-                href={`/kitchen/print/${o.id}`}
-                target="_blank"
-                className="btn btn-brand btn-block no-print"
-              >
-                🖨️ Cetak Dapur (3 station)
-              </Link>
+              <div className="row no-print" style={{ marginTop: 8 }}>
+                <Link
+                  href={`/kitchen/print/${o.id}`}
+                  target="_blank"
+                  className="btn btn-brand btn-block"
+                >
+                  🖨️ Cetak Dapur (3 station)
+                </Link>
+                <button
+                  className="btn btn-green btn-block"
+                  disabled={completing === o.id}
+                  onClick={() => completeOrder(o.id)}
+                >
+                  {completing === o.id ? 'Menyimpan…' : '✅ Pesanan Selesai'}
+                </button>
+              </div>
             </div>
           );
         })}

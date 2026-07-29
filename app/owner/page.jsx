@@ -6,6 +6,12 @@ import PinGate from '../components/PinGate';
 import AlertsPanel from '../components/AlertsPanel';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+function durasi(sec) {
+  sec = Number(sec) || 0;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 function jamWIB(iso) {
   if (!iso) return '';
   try {
@@ -126,6 +132,34 @@ function OwnerInner() {
               ))}
             </div>
           </div>
+
+          {data.kitchen_perf && (
+            <div className="card" style={{ marginTop: 12 }}>
+              <div className="between" style={{ marginBottom: 10 }}>
+                <div className="h2">⏱️ Kinerja Dapur</div>
+                <span className="badge">{data.kitchen_perf.count} order selesai</span>
+              </div>
+              {data.kitchen_perf.count === 0 ? (
+                <p className="muted small" style={{ margin: 0 }}>Belum ada order yang ditandai selesai dari Kitchen Display.</p>
+              ) : (
+                <>
+                  <div className="between">
+                    <span className="muted">Rata-rata waktu (masuk → selesai)</span>
+                    <span className="bold">{durasi(data.kitchen_perf.avg_duration_sec)}</span>
+                  </div>
+                  <div className="muted small" style={{ marginTop: 10, marginBottom: 6 }}>Order paling lama:</div>
+                  <div className="col" style={{ gap: 6 }}>
+                    {data.kitchen_perf.slowest.map((p, i) => (
+                      <div key={i} className="between small">
+                        <span>#{p.order_no} · Meja {p.table_number} · {p.item_count} item</span>
+                        <span className="bold">{durasi(p.duration_sec)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {data.voids && (
             <div className="card" style={{ marginTop: 12, borderColor: data.voids.count ? 'var(--red)' : 'var(--line)' }}>

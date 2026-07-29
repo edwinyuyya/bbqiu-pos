@@ -216,6 +216,7 @@ function SupplierTab({ suppliers, reload }) {
 /* ---------- Daftar Stok ---------- */
 function StockList({ items, reload, suppliers }) {
   const [edit, setEdit] = useState(null);
+  const [q, setQ] = useState('');
   async function adjust(it, mode) {
     const label = mode === 'set' ? `Set stok ${it.name} jadi berapa?` : `Pakai/keluar berapa ${it.unit} ${it.name}?`;
     const v = prompt(label, mode === 'set' ? String(it.stock_qty) : '');
@@ -228,9 +229,14 @@ function StockList({ items, reload, suppliers }) {
     await fetch(`/api/inventory/${it.id}`, { method: 'DELETE' });
     reload();
   }
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return items.filter((i) => !s || i.name.toLowerCase().includes(s) || (i.category || '').toLowerCase().includes(s));
+  }, [items, q]);
   return (
     <div className="col">
-      {items.map((it) => {
+      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {filtered.map((it) => {
         const low = Number(it.stock_qty) <= Number(it.min_stock);
         return (
           <div key={it.id} className="card" style={low ? { borderColor: 'var(--red)' } : null}>
@@ -257,7 +263,9 @@ function StockList({ items, reload, suppliers }) {
           </div>
         );
       })}
-      {items.length === 0 && <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada barang.</p></div>}
+      {filtered.length === 0 && (
+        <div className="card"><p className="muted" style={{ margin: 0 }}>{items.length === 0 ? 'Belum ada barang.' : 'Tidak ada barang yang cocok.'}</p></div>
+      )}
       {edit && <EditModal item={edit} onClose={() => setEdit(null)} reload={reload} suppliers={suppliers} />}
     </div>
   );

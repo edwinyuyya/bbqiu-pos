@@ -3,16 +3,21 @@ import { supabaseServer } from '../../../../lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/stock-batches/consume  { batch_code, qty?, force?, note? }
+// POST /api/stock-batches/consume  { batch_code, qty?, force?, note?, waste? }
 // Pakai/ambil batch untuk dipakai. Cek FIFO: kalau ada batch item yang sama
 // dengan tanggal produksi lebih awal & masih aktif, WARNING (bukan blokir) —
 // kecuali force:true (dicatat sebagai override).
+// waste:true -> dibuang/rusak (bukan dipakai resep), FIFO tidak relevan
+// (barang fisik yang di-scan memang yang rusak), wajib isi note (alasan).
 export async function POST(req) {
   const db = supabaseServer();
   let b;
   try { b = await req.json(); } catch { return NextResponse.json({ error: 'Body tidak valid' }, { status: 400 }); }
   const code = (b.batch_code || '').toString().trim();
   if (!code) return NextResponse.json({ error: 'Kode batch wajib' }, { status: 400 });
+  const isWaste = !!b.waste;
+  if (isWaste && !(b.note || '').toString().trim())
+    return NextResponse.json({ error: 'Alasan wajib diisi' }, { status: 400 });
 
   const { data: batch, error } = await db
     .from('stock_batches')
@@ -29,8 +34,8 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Batch ini sudah tidak aktif' }, { status: 409 });
   }
 
-  // Cek FIFO
-  if (!b.force) {
+  // Cek FIFO (dilewati untuk pembuangan/rusak — barang fisiknya sudah pasti yang di-scan)
+  if (!b.force && !isWaste) {
     const { data: older } = await db
       .from('stock_batches')
       .select('batch_code, produced_date, qty_remaining, created_at')
@@ -53,9 +58,14 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Qty tidak valid' }, { status: 400 });
 
   const newRemaining = Number(batch.qty_remaining) - consumeQty;
-  const newStatus = newRemaining <= 0 ? 'depleted' : 'active';
-  const patch = { qty_remaining: newRemaining, status: newStatus };
-  if (newStatus === 'depleted') patch.consumed_at = new Date().toISOString();
+  const patch = { qty_remaining: newRemaining };
+  if (isWaste) {
+    patch.status = newRemaining <= 0 ? 'void' : 'active';
+    if (newRemaining <= 0) { patch.void_reason = b.note; patch.voided_at = new Date().toISOString(); }
+  } else {
+    patch.status = newRemaining <= 0 ? 'depleted' : 'active';
+    if (patch.status === 'depleted') patch.consumed_at = new Date().toISOString();
+  }
   await db.from('stock_batches').update(patch).eq('id', batch.id);
 
   await db.from('inventory_items').update({
@@ -63,8 +73,10 @@ export async function POST(req) {
   }).eq('id', batch.inventory_item_id);
 
   await db.from('stock_movements').insert({
-    item_id: batch.inventory_item_id, type: 'out', qty: consumeQty,
-    note: `Pakai batch ${batch.batch_code}${b.force ? ` (FIFO override: ${b.note || '-'})` : ''}`,
+    item_id: batch.inventory_item_id, type: isWaste ? 'waste' : 'out', qty: consumeQty,
+    note: isWaste
+      ? `Rusak/buang batch ${batch.batch_code}: ${b.note}`
+      : `Pakai batch ${batch.batch_code}${b.force ? ` (FIFO override: ${b.note || '-'})` : ''}`,
   });
 
   return NextResponse.json({ ok: true, batch: { ...batch, ...patch } });

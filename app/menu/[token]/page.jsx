@@ -49,12 +49,34 @@ export default async function MenuPage({ params }) {
     .eq('available', true)
     .order('sort_order', { ascending: true });
 
+  // Sisa porsi berdasarkan stok bahan riil (resep qty vs stock_qty terkini) —
+  // dikombinasikan (diambil yang paling kecil) dengan daily_qty manual kalau ada.
+  const menuIds = (items || []).map((i) => i.id);
+  let stockLimitByMenu = {};
+  if (menuIds.length) {
+    const { data: recipeRows } = await db
+      .from('recipe_items')
+      .select('menu_item_id, qty, inventory_items(stock_qty)')
+      .in('menu_item_id', menuIds);
+    for (const r of recipeRows || []) {
+      const need = Number(r.qty);
+      if (!need || need <= 0) continue;
+      const canMake = Math.floor(Number(r.inventory_items?.stock_qty || 0) / need);
+      const cur = stockLimitByMenu[r.menu_item_id];
+      stockLimitByMenu[r.menu_item_id] = cur === undefined ? canMake : Math.min(cur, canMake);
+    }
+  }
+  const itemsWithStock = (items || []).map((i) => ({
+    ...i,
+    stock_limit: stockLimitByMenu[i.id] !== undefined ? stockLimitByMenu[i.id] : null,
+  }));
+
   return (
     <MenuClient
       token={token}
       table={table}
       categories={categories || []}
-      items={items || []}
+      items={itemsWithStock}
       taxPercent={Number(process.env.NEXT_PUBLIC_TAX_PERCENT || 0)}
       merchant={process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran'}
     />

@@ -117,6 +117,29 @@ export async function GET(req) {
     at: c.created_at,
   }));
 
+  // kerugian rusak/susut (waste) — terpisah dari pemakaian resep normal
+  const { data: wasteRaw } = await db
+    .from('stock_movements')
+    .select('qty, note, created_at, inventory_items(name, unit, cost_price)')
+    .gte('created_at', startISO)
+    .eq('type', 'waste')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const wasteList = wasteRaw || [];
+  const wasteValue = wasteList.reduce((s, w) => s + Number(w.qty) * Number(w.inventory_items?.cost_price || 0), 0);
+  const waste = {
+    count: wasteList.length,
+    value: wasteValue,
+    list: wasteList.slice(0, 20).map((w) => ({
+      name: w.inventory_items?.name || '-',
+      qty: Number(w.qty),
+      unit: w.inventory_items?.unit || '',
+      value: Number(w.qty) * Number(w.inventory_items?.cost_price || 0),
+      note: w.note,
+      at: w.created_at,
+    })),
+  };
+
   // kinerja dapur (durasi order masuk -> diklik selesai)
   const { data: perfRaw } = await db
     .from('kitchen_perf_log')
@@ -166,5 +189,6 @@ export async function GET(req) {
     voids,
     closures,
     kitchen_perf: kitchenPerf,
+    waste,
   });
 }

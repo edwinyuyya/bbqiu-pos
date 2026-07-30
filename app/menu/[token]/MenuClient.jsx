@@ -114,8 +114,9 @@ export default function MenuClient({ token, table, categories, items, taxPercent
           <h2 className="h2" style={{ marginBottom: 10 }}>{cat.name}</h2>
           <div className="col">
             {cat.items.map((it) => {
-              const limited = it.daily_qty != null;
-              const remaining = limited ? Number(it.daily_qty) : null;
+              const limits = [it.daily_qty, it.stock_limit].filter((v) => v != null).map(Number);
+              const limited = limits.length > 0;
+              const remaining = limited ? Math.min(...limits) : null;
               const inCart = cart[it.id] || 0;
               const atMax = limited && inCart >= remaining;
               return (

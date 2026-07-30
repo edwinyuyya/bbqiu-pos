@@ -346,6 +346,8 @@ create index if not exists idx_batches_code on stock_batches(batch_code);
 create index if not exists idx_batches_parent on stock_batches(parent_batch_id);
 
 alter table inventory_items add column if not exists batch_tracked boolean default false;
+alter table stock_batches add column if not exists void_reason text;
+alter table stock_batches add column if not exists voided_at timestamptz;
 
 alter table stock_batches enable row level security;
 drop policy if exists "allow all stock_batches" on stock_batches;

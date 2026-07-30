@@ -224,6 +224,17 @@ function StockList({ items, reload, suppliers }) {
     await fetch('/api/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'adjust', item_id: it.id, mode, qty: Number(v) }) });
     reload();
   }
+  // Rusak/susut: beda dari "Pakai" biasa, dicatat type='waste' supaya bisa
+  // dilaporkan terpisah dari pemakaian resep normal.
+  async function waste(it) {
+    const v = prompt(`Berapa ${it.unit} ${it.name} yang rusak/harus dibuang?`);
+    if (v === null || !Number(v) || Number(v) <= 0) return;
+    const reason = prompt('Alasan (mis. basi, jatuh, kadaluarsa dini):');
+    if (reason === null) return;
+    if (!reason.trim()) { alert('Alasan wajib diisi.'); return; }
+    await fetch('/api/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'waste', item_id: it.id, qty: Number(v), note: reason.trim() }) });
+    reload();
+  }
   async function del(it) {
     if (!confirm(`Hapus ${it.name}?`)) return;
     await fetch(`/api/inventory/${it.id}`, { method: 'DELETE' });
@@ -257,6 +268,7 @@ function StockList({ items, reload, suppliers }) {
             <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
               <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => adjust(it, 'set')}>Opname (set)</button>
               <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => adjust(it, 'out')}>Pakai (−)</button>
+              <button className="btn btn-red" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => waste(it)}>🗑️ Rusak/Susut</button>
               <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => setEdit(it)}>Edit</button>
               <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => del(it)}>Hapus</button>
             </div>

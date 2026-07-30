@@ -161,6 +161,30 @@ function OwnerInner() {
             </div>
           )}
 
+          {data.waste && (
+            <div className="card" style={{ marginTop: 12, borderColor: data.waste.count ? 'var(--red)' : 'var(--line)' }}>
+              <div className="between" style={{ marginBottom: 10 }}>
+                <div className="h2">🗑️ Kerugian Rusak/Susut</div>
+                <span className="badge badge-red">{data.waste.count}× · {rupiah(data.waste.value)}</span>
+              </div>
+              {data.waste.count === 0 ? (
+                <p className="muted small" style={{ margin: 0 }}>Tidak ada barang rusak/susut ✓</p>
+              ) : (
+                <div className="col" style={{ gap: 8 }}>
+                  {data.waste.list.map((w, i) => (
+                    <div key={i} className="between small" style={{ borderBottom: '1px solid var(--line)', paddingBottom: 6 }}>
+                      <div>
+                        <div>{w.qty} {w.unit} {w.name}</div>
+                        <div className="muted">{w.note} · {jamWIB(w.at)}</div>
+                      </div>
+                      <span className="bold" style={{ color: '#ff8585', whiteSpace: 'nowrap' }}>{rupiah(w.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {data.voids && (
             <div className="card" style={{ marginTop: 12, borderColor: data.voids.count ? 'var(--red)' : 'var(--line)' }}>
               <div className="between" style={{ marginBottom: 10 }}>

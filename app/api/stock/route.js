@@ -58,6 +58,19 @@ export async function POST(req) {
     return NextResponse.json({ ok: true, count: moves.length });
   }
 
+  if (b.action === 'waste') {
+    if (!b.item_id) return NextResponse.json({ error: 'item_id wajib' }, { status: 400 });
+    if (!b.note || !b.note.toString().trim()) return NextResponse.json({ error: 'Alasan wajib diisi' }, { status: 400 });
+    const { data: it } = await db.from('inventory_items').select('stock_qty').eq('id', b.item_id).single();
+    if (!it) return NextResponse.json({ error: 'Barang tidak ditemukan' }, { status: 404 });
+    const qty = Number(b.qty) || 0;
+    if (qty <= 0) return NextResponse.json({ error: 'Qty tidak valid' }, { status: 400 });
+    const newStock = Math.max(0, Number(it.stock_qty || 0) - qty);
+    await db.from('inventory_items').update({ stock_qty: newStock }).eq('id', b.item_id);
+    await db.from('stock_movements').insert({ item_id: b.item_id, type: 'waste', qty, note: b.note });
+    return NextResponse.json({ ok: true, stock_qty: newStock });
+  }
+
   if (b.action === 'adjust') {
     if (!b.item_id) return NextResponse.json({ error: 'item_id wajib' }, { status: 400 });
     const { data: it } = await db.from('inventory_items').select('stock_qty').eq('id', b.item_id).single();

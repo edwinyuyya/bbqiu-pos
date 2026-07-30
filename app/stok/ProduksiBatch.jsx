@@ -183,9 +183,10 @@ function ScanPakaiRepack({ reload }) {
   const [data, setData] = useState(null); // { batch, item, fifo_blocked, older_batches, successor_batch_code }
   const [err, setErr] = useState('');
   const [qty, setQty] = useState('');
-  const [mode, setMode] = useState(null); // 'pakai' | 'repack' | null
+  const [mode, setMode] = useState(null); // 'pakai' | 'repack' | 'waste' | null
   const [forceReason, setForceReason] = useState('');
   const [newQty, setNewQty] = useState('');
+  const [wasteReason, setWasteReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [printUrl, setPrintUrl] = useState('');
@@ -226,6 +227,27 @@ function ScanPakaiRepack({ reload }) {
     } else if (r.status === 409 && d.warning) {
       setData((x) => ({ ...x, fifo_blocked: true, older_batches: d.older_batches }));
       setMode('confirm-force');
+    } else {
+      setMsg(d.error || 'Gagal memproses');
+    }
+    setBusy(false);
+    setTimeout(() => setMsg(''), 4000);
+  }
+
+  // Buang/rusak: berbeda dari "Pakai" — tidak cek FIFO (barang fisik yang
+  // di-scan memang yang rusak), wajib isi alasan, dicatat type='waste'.
+  async function buang() {
+    if (!wasteReason.trim()) { setMsg('Alasan wajib diisi'); return; }
+    setBusy(true); setMsg('');
+    const r = await fetch('/api/stock-batches/consume', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batch_code: data.batch.batch_code, qty, waste: true, note: wasteReason.trim() }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setMsg('✓ Dicatat sebagai rusak/susut');
+      setData(null); setMode(null); setWasteReason('');
+      await reload();
     } else {
       setMsg(d.error || 'Gagal memproses');
     }
@@ -296,7 +318,20 @@ function ScanPakaiRepack({ reload }) {
                 <button className="btn btn-green" disabled={busy} onClick={() => pakai(false)}>✅ Pakai</button>
               </div>
               <button className="btn btn-block" style={{ marginTop: 8 }} onClick={() => setMode('repack')}>✂️ Repack (sisa disesuaikan)</button>
+              <button className="btn btn-red btn-block" style={{ marginTop: 8 }} onClick={() => setMode('waste')}>🗑️ Buang/Rusak</button>
             </>
+          )}
+
+          {mode === 'waste' && (
+            <div className="card" style={{ marginTop: 8, padding: '8px 10px' }}>
+              <p className="small" style={{ margin: 0 }}>Berapa {data.batch.unit} yang rusak/dibuang?</p>
+              <input className="input" style={{ marginTop: 6, width: 120 }} type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
+              <input className="input" style={{ marginTop: 6 }} placeholder="Alasan (mis. basi, jatuh, kadaluarsa dini)" value={wasteReason} onChange={(e) => setWasteReason(e.target.value)} />
+              <div className="row" style={{ marginTop: 6 }}>
+                <button className="btn btn-red btn-block" disabled={busy || !wasteReason.trim()} onClick={buang}>Catat Rusak/Susut</button>
+                <button className="btn btn-block" onClick={() => { setMode(null); setWasteReason(''); }}>Batal</button>
+              </div>
+            </div>
           )}
 
           {mode === 'confirm-force' && (

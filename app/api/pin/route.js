@@ -13,11 +13,12 @@ function pinFor(scope) {
     case 'dapur': return process.env.DAPUR_PIN || staff;
     case 'stok':  return process.env.STOK_PIN || staff;
     case 'waiter': return process.env.WAITER_PIN || staff;
+    case 'spv':   return process.env.SPV_PIN || staff;
     default:      return staff; // 'staff'
   }
 }
 
-const SCOPES = ['staff', 'owner', 'admin', 'kasir', 'dapur', 'stok', 'waiter'];
+const SCOPES = ['staff', 'owner', 'admin', 'kasir', 'dapur', 'stok', 'waiter', 'spv'];
 function normScope(s) {
   return SCOPES.includes(s) ? s : 'staff';
 }

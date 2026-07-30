@@ -35,6 +35,11 @@ export default function Home() {
       title: '⚙️ Admin',
       desc: 'Kelola menu, harga, resep/HPP, meja, dan cetak QR code meja.',
     },
+    {
+      href: '/spv',
+      title: '🧑‍💼 Dashboard SPV',
+      desc: 'Pantauan operasional: order aktif, kinerja dapur, panggilan waiter, stok & rusak/susut. Tanpa HPP/harga beli/margin.',
+    },
   ];
 
   return (

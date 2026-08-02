@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { supabaseServer } from '../../../../lib/supabaseServer';
+import { getBaseUrl } from '../../../../lib/baseUrl';
 import QrPrintButton from './QrPrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export default async function QrCardPage({ params }) {
     return <div className="container-sm" style={{ paddingTop: 40 }}><div className="card">Meja tidak ditemukan.</div></div>;
   }
 
-  const base = process.env.NEXT_PUBLIC_BASE_URL || '';
+  const base = await getBaseUrl();
   const link = `${base}/menu/${table.token}`;
   const dataUrl = await QRCode.toDataURL(link, { width: 360, margin: 1 });
   const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran';

@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { supabaseServer } from '../../../lib/supabaseServer';
+import { getBaseUrl } from '../../../lib/baseUrl';
 import QrPrintButton from './[token]/QrPrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export default async function QrAllPage() {
     .order('area', { ascending: true })
     .order('table_number', { ascending: true });
 
-  const base = process.env.NEXT_PUBLIC_BASE_URL || '';
+  const base = await getBaseUrl();
   const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran';
 
   const labels = await Promise.all(

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../lib/supabaseServer';
+import { taxPercent } from '../../../lib/tax';
 
 export const dynamic = 'force-dynamic';
 
-const TAX_PERCENT = Number(process.env.NEXT_PUBLIC_TAX_PERCENT || 0);
+const TAX_PERCENT = taxPercent();
 
 // POST /api/orders  -> buat order baru dari keranjang pelanggan
 export async function POST(req) {

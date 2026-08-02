@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
+import { taxPercent } from '../../lib/tax';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
@@ -53,7 +54,10 @@ export default function TakeOrder({ onCreated }) {
       return { key, item: itemById[menuId], method: method || null, qty, note: notes[key] || '' };
     })
     .filter((l) => l.item);
-  const total = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const subtotal = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const pb1 = taxPercent();
+  const tax = Math.round((subtotal * pb1) / 100);
+  const total = subtotal + tax;
   const totalQty = cartLines.reduce((s, l) => s + l.qty, 0);
 
   function setQty(key, delta) {
@@ -198,7 +202,11 @@ export default function TakeOrder({ onCreated }) {
             </div>
           ))}
           <hr className="hr" />
-          <div className="between bold"><span>Total</span><span>{rupiah(total)}</span></div>
+          <div className="between small"><span className="muted">Subtotal</span><span>{rupiah(subtotal)}</span></div>
+          {pb1 > 0 && (
+            <div className="between small"><span className="muted">PB1 {pb1}%</span><span>{rupiah(tax)}</span></div>
+          )}
+          <div className="between bold" style={{ marginTop: 4 }}><span>Total</span><span>{rupiah(total)}</span></div>
           {error && <p className="small" style={{ color: '#ff8585', marginTop: 8 }}>{error}</p>}
           <button className="btn btn-brand btn-block" style={{ marginTop: 10 }} disabled={submitting} onClick={submit}>
             {submitting ? 'Memproses…' : `Buat Order · ${rupiah(total)}`}

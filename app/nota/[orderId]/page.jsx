@@ -1,6 +1,7 @@
 import { supabaseServer } from '../../../lib/supabaseServer';
 import PrintNota from './PrintNota';
 import BbqiuLogoMark from '../../components/BbqiuLogoMark';
+import { taxPercent } from '../../../lib/tax';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export default async function NotaPage({ params }) {
         <div className="line" />
         <div className="item"><span>Subtotal</span><span className="rgt">{rupiah(order.subtotal)}</span></div>
         {Number(order.tax) > 0 && (
-          <div className="item"><span>Pajak</span><span className="rgt">{rupiah(order.tax)}</span></div>
+          <div className="item"><span>PB1 {taxPercent()}%</span><span className="rgt">{rupiah(order.tax)}</span></div>
         )}
         <div className="item" style={{ fontWeight: 800, fontSize: 14, marginTop: 2 }}>
           <span>TOTAL</span><span className="rgt">{rupiah(order.total)}</span>

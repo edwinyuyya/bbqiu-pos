@@ -286,7 +286,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
               <div className="between"><span className="muted">Subtotal</span><span>{rupiah(subtotal)}</span></div>
               {taxPercent > 0 && (
                 <div className="between" style={{ marginTop: 6 }}>
-                  <span className="muted">Pajak {taxPercent}%</span><span>{rupiah(tax)}</span>
+                  <span className="muted">PB1 {taxPercent}%</span><span>{rupiah(tax)}</span>
                 </div>
               )}
               <hr className="hr" />

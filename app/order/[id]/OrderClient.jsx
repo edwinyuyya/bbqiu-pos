@@ -145,7 +145,7 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
         <div className="between"><span className="muted">Subtotal</span><span>{rupiah(order.subtotal)}</span></div>
         {order.tax > 0 && (
           <div className="between" style={{ marginTop: 6 }}>
-            <span className="muted">Pajak</span><span>{rupiah(order.tax)}</span>
+            <span className="muted">PB1</span><span>{rupiah(order.tax)}</span>
           </div>
         )}
         <hr className="hr" />

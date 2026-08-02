@@ -1,5 +1,6 @@
 import { supabaseServer } from '../../../lib/supabaseServer';
 import MenuClient from './MenuClient';
+import { taxPercent } from '../../../lib/tax';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,7 @@ export default async function MenuPage({ params }) {
       table={table}
       categories={categories || []}
       items={itemsWithStock}
-      taxPercent={Number(process.env.NEXT_PUBLIC_TAX_PERCENT || 0)}
+      taxPercent={taxPercent()}
       merchant={process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran'}
     />
   );

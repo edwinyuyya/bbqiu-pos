@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
+import { variantLabels } from '../../lib/variants';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
@@ -255,11 +256,11 @@ function KitchenPage() {
                     <div key={it.id} className="between" style={{ marginBottom: 6 }}>
                       <div>
                         <span className="bold">{it.qty}×</span> {it.name}
-                        {it.cook_method && (
-                          <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>
-                            {it.cook_method === 'grill' ? '🔥 GRILL' : '🍲 STEAMBOAT'}
+                        {variantLabels(it).map((lab) => (
+                          <span key={lab} className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>
+                            {lab.toUpperCase()}
                           </span>
-                        )}
+                        ))}
                         {it.note && <div className="muted small">“{it.note}”</div>}
                         <div>
                           <span className={`badge ${it.kitchen_status === 'ready' ? 'badge-green' : 'badge-blue'}`} style={{ fontSize: 10 }}>

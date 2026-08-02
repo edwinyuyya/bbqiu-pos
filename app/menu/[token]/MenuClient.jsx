@@ -3,6 +3,14 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CallWaiterButton from '../../components/CallWaiterButton';
+import {
+  COOK_METHODS,
+  DRINK_TEMPS,
+  SWEETNESS,
+  cartKey,
+  parseCartKey,
+  variantLabels,
+} from '../../../lib/variants';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -10,10 +18,10 @@ function rupiah(n) {
 
 export default function MenuClient({ token, table, categories, items, taxPercent, merchant }) {
   const router = useRouter();
-  // Kunci keranjang = `${menuId}|${cookMethod}` supaya 1 menu bisa dipesan
-  // sebagai Grill DAN Steamboat sekaligus sebagai baris terpisah.
-  const [cart, setCart] = useState({}); // { "menuId|method": qty }
-  const [notes, setNotes] = useState({}); // { "menuId|method": note }
+  const [cart, setCart] = useState({}); // { cartKey: qty }
+  const [notes, setNotes] = useState({}); // { cartKey: note }
+  // Pilihan es/panas + mondo/manis/tawar yang sedang aktif per menu minuman.
+  const [drinkOpt, setDrinkOpt] = useState({}); // { menuId: { temp, sweet } }
   const [showCart, setShowCart] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [orderNote, setOrderNote] = useState('');
@@ -42,8 +50,8 @@ export default function MenuClient({ token, table, categories, items, taxPercent
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
     .map(([key, qty]) => {
-      const [menuId, method] = key.split('|');
-      return { key, item: itemById[menuId], method: method || null, qty, note: notes[key] || '' };
+      const { menuId, method, temp, sweet } = parseCartKey(key);
+      return { key, item: itemById[menuId], method, temp, sweet, qty, note: notes[key] || '' };
     })
     .filter((l) => l.item);
 
@@ -83,6 +91,8 @@ export default function MenuClient({ token, table, categories, items, taxPercent
             qty: l.qty,
             note: l.note,
             cook_method: l.method,
+            drink_temp: l.temp,
+            sweetness: l.sweet,
           })),
         }),
       });
@@ -127,11 +137,16 @@ export default function MenuClient({ token, table, categories, items, taxPercent
               const limited = it.daily_qty != null;
               const remaining = limited ? Number(it.daily_qty) : null;
               const stockLeft = it.stock_limit != null && it.stock_limit > 0 ? Number(it.stock_limit) : null;
-              // Menu Grill & Steamboat punya 2 baris qty terpisah (grill / steamboat);
-              // sisa porsi dihitung dari total keduanya.
-              const methods = it.needs_cook_method ? ['grill', 'steamboat'] : [null];
-              const totalInCart = methods.reduce((s, mth) => s + (cart[`${it.id}|${mth || ''}`] || 0), 0);
+              // Satu menu bisa punya beberapa baris keranjang (grill/steamboat,
+              // atau es/panas × mondo/manis/tawar); sisa porsi dihitung dari totalnya.
+              const myLines = Object.entries(cart).filter(
+                ([k, q]) => q > 0 && parseCartKey(k).menuId === it.id
+              );
+              const totalInCart = myLines.reduce((s, [, q]) => s + q, 0);
               const atMax = limited && totalInCart >= remaining;
+              // Minuman: pilihan suhu + tingkat manis yang sedang aktif di kartu ini.
+              const opt = drinkOpt[it.id] || { temp: 'es', sweet: 'manis' };
+              const drinkKey = cartKey(it.id, { temp: opt.temp, sweet: opt.sweet });
               return (
               <div key={it.id} className="card">
                 <div className="between">
@@ -158,27 +173,27 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                       )}
                     </div>
                   </div>
-                  {!it.needs_cook_method && (
+                  {!it.needs_cook_method && !it.needs_drink_option && (
                     <div className="qty">
                       {totalInCart > 0 && (
                         <>
-                          <button onClick={() => setQty(`${it.id}|`, -1)}>−</button>
+                          <button onClick={() => setQty(cartKey(it.id), -1)}>−</button>
                           <span className="bold">{totalInCart}</span>
                         </>
                       )}
-                      <button onClick={() => setQty(`${it.id}|`, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
+                      <button onClick={() => setQty(cartKey(it.id), 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
                     </div>
                   )}
                 </div>
 
                 {it.needs_cook_method && (
                   <div className="col" style={{ gap: 6, marginTop: 10 }}>
-                    {[{ id: 'grill', label: '🔥 Grill' }, { id: 'steamboat', label: '🍲 Steamboat' }].map((mth) => {
-                      const key = `${it.id}|${mth.id}`;
+                    {COOK_METHODS.map((mth) => {
+                      const key = cartKey(it.id, { method: mth.id });
                       const q = cart[key] || 0;
                       return (
                         <div key={mth.id} className="between">
-                          <span className="small">{mth.label}</span>
+                          <span className="small">{mth.emoji} {mth.label}</span>
                           <div className="qty">
                             {q > 0 && (
                               <>
@@ -193,6 +208,72 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                     })}
                   </div>
                 )}
+
+                {it.needs_drink_option && (
+                  <div className="col" style={{ gap: 8, marginTop: 10 }}>
+                    <div className="opt-row">
+                      {DRINK_TEMPS.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={`chip ${opt.temp === t.id ? 'chip-on' : ''}`}
+                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, temp: t.id } }))}
+                        >
+                          {t.emoji} {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="opt-row">
+                      {SWEETNESS.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={`chip ${opt.sweet === s.id ? 'chip-on' : ''}`}
+                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, sweet: s.id } }))}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="between">
+                      <span className="muted small">
+                        Tambah: {DRINK_TEMPS.find((t) => t.id === opt.temp)?.label} ·{' '}
+                        {SWEETNESS.find((s) => s.id === opt.sweet)?.label}
+                      </span>
+                      <div className="qty">
+                        {(cart[drinkKey] || 0) > 0 && (
+                          <>
+                            <button onClick={() => setQty(drinkKey, -1)}>−</button>
+                            <span className="bold">{cart[drinkKey]}</span>
+                          </>
+                        )}
+                        <button onClick={() => setQty(drinkKey, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Kolom catatan per baris pesanan, muncul begitu item masuk keranjang */}
+                {myLines.map(([key]) => {
+                  const v = parseCartKey(key);
+                  const labels = variantLabels({
+                    cook_method: v.method, drink_temp: v.temp, sweetness: v.sweet,
+                  });
+                  return (
+                    <input
+                      key={key}
+                      className="input"
+                      style={{ marginTop: 8 }}
+                      placeholder={
+                        labels.length
+                          ? `Catatan ${labels.join(' · ')} (mis. es sedikit)`
+                          : 'Catatan (mis. tidak pedas)'
+                      }
+                      value={notes[key] || ''}
+                      onChange={(e) => setNotes((n) => ({ ...n, [key]: e.target.value }))}
+                    />
+                  );
+                })}
               </div>
               );
             })}
@@ -242,11 +323,13 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                   <div className="between">
                     <div className="bold">
                       {l.item.name}
-                      {l.method && (
-                        <span className="badge badge-blue" style={{ marginLeft: 6 }}>
-                          {l.method === 'grill' ? '🔥 Grill' : '🍲 Steamboat'}
+                      {variantLabels({
+                        cook_method: l.method, drink_temp: l.temp, sweetness: l.sweet,
+                      }).map((lab) => (
+                        <span key={lab} className="badge badge-blue" style={{ marginLeft: 6 }}>
+                          {lab}
                         </span>
-                      )}
+                      ))}
                     </div>
                     <div className="qty">
                       <button onClick={() => setQty(l.key, -1)}>−</button>

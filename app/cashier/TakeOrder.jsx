@@ -4,6 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
+import {
+  COOK_METHODS,
+  DRINK_TEMPS,
+  SWEETNESS,
+  cartKey,
+  parseCartKey,
+  variantLabels,
+} from '../../lib/variants';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
@@ -20,8 +28,10 @@ export default function TakeOrder({ onCreated }) {
   const [tableId, setTableId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [payment, setPayment] = useState('cashier');
-  const [cart, setCart] = useState({}); // menu_item_id -> qty
-  const [notes, setNotes] = useState({}); // menu_item_id -> note
+  const [cart, setCart] = useState({}); // cartKey -> qty
+  const [notes, setNotes] = useState({}); // cartKey -> note
+  // Pilihan es/panas + mondo/manis/tawar yang sedang aktif per menu minuman.
+  const [drinkOpt, setDrinkOpt] = useState({}); // menuId -> { temp, sweet }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null); // { order_id, order_no }
@@ -46,12 +56,11 @@ export default function TakeOrder({ onCreated }) {
     return byCat.filter((c) => c.items.length);
   }, [categories, menuItems]);
 
-  // Kunci keranjang = `${menuId}|${cookMethod}` (sama seperti menu pelanggan)
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
     .map(([key, qty]) => {
-      const [menuId, method] = key.split('|');
-      return { key, item: itemById[menuId], method: method || null, qty, note: notes[key] || '' };
+      const { menuId, method, temp, sweet } = parseCartKey(key);
+      return { key, item: itemById[menuId], method, temp, sweet, qty, note: notes[key] || '' };
     })
     .filter((l) => l.item);
   const subtotal = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
@@ -86,7 +95,14 @@ export default function TakeOrder({ onCreated }) {
           token: table.token,
           customer_name: customerName,
           payment_method: payment,
-          items: cartLines.map((l) => ({ menu_item_id: l.item.id, qty: l.qty, note: l.note, cook_method: l.method })),
+          items: cartLines.map((l) => ({
+            menu_item_id: l.item.id,
+            qty: l.qty,
+            note: l.note,
+            cook_method: l.method,
+            drink_temp: l.temp,
+            sweetness: l.sweet,
+          })),
         }),
       });
       const data = await res.json();
@@ -143,32 +159,38 @@ export default function TakeOrder({ onCreated }) {
         <div key={cat.id} className="card">
           <div className="h2" style={{ marginBottom: 8 }}>{cat.name}</div>
           <div className="col" style={{ gap: 8 }}>
-            {cat.items.map((it) => (
+            {cat.items.map((it) => {
+              const opt = drinkOpt[it.id] || { temp: 'es', sweet: 'manis' };
+              const drinkKey = cartKey(it.id, { temp: opt.temp, sweet: opt.sweet });
+              const myLines = Object.entries(cart).filter(
+                ([k, q]) => q > 0 && parseCartKey(k).menuId === it.id
+              );
+              return (
               <div key={it.id}>
                 <div className="between">
                   <div style={{ flex: 1 }}>
                     <div className="bold">{it.name}</div>
                     <div className="muted small">{rupiah(it.price)}</div>
                   </div>
-                  {!it.needs_cook_method && (
+                  {!it.needs_cook_method && !it.needs_drink_option && (
                     <div className="qty">
-                      {cart[`${it.id}|`] > 0 && (
+                      {cart[cartKey(it.id)] > 0 && (
                         <>
-                          <button onClick={() => setQty(`${it.id}|`, -1)}>−</button>
-                          <span className="bold">{cart[`${it.id}|`]}</span>
+                          <button onClick={() => setQty(cartKey(it.id), -1)}>−</button>
+                          <span className="bold">{cart[cartKey(it.id)]}</span>
                         </>
                       )}
-                      <button onClick={() => setQty(`${it.id}|`, 1)}>+</button>
+                      <button onClick={() => setQty(cartKey(it.id), 1)}>+</button>
                     </div>
                   )}
                 </div>
                 {it.needs_cook_method && (
                   <div className="col" style={{ gap: 4, marginTop: 4, paddingLeft: 10 }}>
-                    {[{ id: 'grill', label: '🔥 Grill' }, { id: 'steamboat', label: '🍲 Steamboat' }].map((mth) => {
-                      const key = `${it.id}|${mth.id}`;
+                    {COOK_METHODS.map((mth) => {
+                      const key = cartKey(it.id, { method: mth.id });
                       return (
                         <div key={mth.id} className="between">
-                          <span className="small muted">{mth.label}</span>
+                          <span className="small muted">{mth.emoji} {mth.label}</span>
                           <div className="qty">
                             {cart[key] > 0 && (
                               <>
@@ -183,8 +205,71 @@ export default function TakeOrder({ onCreated }) {
                     })}
                   </div>
                 )}
+                {it.needs_drink_option && (
+                  <div className="col" style={{ gap: 6, marginTop: 6, paddingLeft: 10 }}>
+                    <div className="opt-row">
+                      {DRINK_TEMPS.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={`chip ${opt.temp === t.id ? 'chip-on' : ''}`}
+                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, temp: t.id } }))}
+                        >
+                          {t.emoji} {t.label}
+                        </button>
+                      ))}
+                      {SWEETNESS.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={`chip ${opt.sweet === s.id ? 'chip-on' : ''}`}
+                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, sweet: s.id } }))}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="between">
+                      <span className="muted small">
+                        Tambah: {DRINK_TEMPS.find((t) => t.id === opt.temp)?.label} ·{' '}
+                        {SWEETNESS.find((s) => s.id === opt.sweet)?.label}
+                      </span>
+                      <div className="qty">
+                        {cart[drinkKey] > 0 && (
+                          <>
+                            <button onClick={() => setQty(drinkKey, -1)}>−</button>
+                            <span className="bold">{cart[drinkKey]}</span>
+                          </>
+                        )}
+                        <button onClick={() => setQty(drinkKey, 1)}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* Kolom catatan per baris pesanan */}
+                {myLines.map(([key]) => {
+                  const v = parseCartKey(key);
+                  const labels = variantLabels({
+                    cook_method: v.method, drink_temp: v.temp, sweetness: v.sweet,
+                  });
+                  return (
+                    <input
+                      key={key}
+                      className="input"
+                      style={{ marginTop: 6 }}
+                      placeholder={
+                        labels.length
+                          ? `Catatan ${labels.join(' · ')}`
+                          : 'Catatan (opsional)'
+                      }
+                      value={notes[key] || ''}
+                      onChange={(e) => setNotes((n) => ({ ...n, [key]: e.target.value }))}
+                    />
+                  );
+                })}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -196,7 +281,11 @@ export default function TakeOrder({ onCreated }) {
             <div key={l.key} className="between small" style={{ marginBottom: 4 }}>
               <span>
                 {l.qty}× {l.item.name}
-                {l.method && <b> [{l.method === 'grill' ? 'Grill' : 'Steamboat'}]</b>}
+                {variantLabels({
+                  cook_method: l.method, drink_temp: l.temp, sweetness: l.sweet,
+                }, { emoji: false }).map((lab) => (
+                  <b key={lab}> [{lab}]</b>
+                ))}
               </span>
               <span>{rupiah(l.item.price * l.qty)}</span>
             </div>

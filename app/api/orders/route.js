@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../lib/supabaseServer';
 import { taxPercent } from '../../../lib/tax';
+import { COOK_METHOD_IDS, DRINK_TEMP_IDS, SWEETNESS_IDS } from '../../../lib/variants';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export async function POST(req) {
   const ids = [...new Set(items.map((i) => i.menu_item_id))];
   const { data: menu, error: mErr } = await db
     .from('menu_items')
-    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, categories(station_id)')
+    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, needs_drink_option, categories(station_id)')
     .in('id', ids);
   if (mErr)
     return NextResponse.json({ error: 'Gagal membaca menu' }, { status: 500 });
@@ -69,10 +70,17 @@ export async function POST(req) {
       );
     const qty = Math.max(1, parseInt(it.qty, 10) || 1);
     const station = m.station_id || m.categories?.station_id || null;
-    const cookMethod = ['grill', 'steamboat'].includes(it.cook_method) ? it.cook_method : null;
+    const cookMethod = COOK_METHOD_IDS.includes(it.cook_method) ? it.cook_method : null;
     if (m.needs_cook_method && !cookMethod)
       return NextResponse.json(
         { error: `Pilih Grill atau Steamboat untuk "${m.name}".` },
+        { status: 400 }
+      );
+    const drinkTemp = DRINK_TEMP_IDS.includes(it.drink_temp) ? it.drink_temp : null;
+    const sweetness = SWEETNESS_IDS.includes(it.sweetness) ? it.sweetness : null;
+    if (m.needs_drink_option && (!drinkTemp || !sweetness))
+      return NextResponse.json(
+        { error: `Pilih es/panas dan tingkat manis untuk "${m.name}".` },
         { status: 400 }
       );
     lineItems.push({
@@ -84,6 +92,8 @@ export async function POST(req) {
       station_id: station,
       kitchen_status: 'queued',
       cook_method: cookMethod,
+      drink_temp: drinkTemp,
+      sweetness,
     });
   }
 

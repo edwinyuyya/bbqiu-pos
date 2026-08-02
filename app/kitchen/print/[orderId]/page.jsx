@@ -1,6 +1,7 @@
 import { supabaseServer } from '../../../../lib/supabaseServer';
 import PrintControls from './PrintControls';
 import BbqiuLogoMark from '../../../components/BbqiuLogoMark';
+import { variantLabels } from '../../../../lib/variants';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,9 @@ export default async function PrintPage({ params }) {
                 <div className="item">
                   <span>
                     <b>{it.qty}x</b> {it.name}
-                    {it.cook_method && <b> [{it.cook_method === 'grill' ? 'GRILL' : 'STEAMBOAT'}]</b>}
+                    {variantLabels(it, { emoji: false }).map((lab) => (
+                      <b key={lab}> [{lab.toUpperCase()}]</b>
+                    ))}
                   </span>
                 </div>
                 {it.note && <div style={{ fontStyle: 'italic', paddingLeft: 8 }}>* {it.note}</div>}

@@ -45,7 +45,7 @@ export default async function MenuPage({ params }) {
 
   const { data: items } = await db
     .from('menu_items')
-    .select('id, category_id, name, description, price, station_id, image_url, daily_qty, available, sort_order')
+    .select('id, category_id, name, description, price, station_id, image_url, daily_qty, available, needs_cook_method, sort_order')
     .eq('available', true)
     .order('sort_order', { ascending: true });
 

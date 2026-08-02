@@ -10,8 +10,10 @@ function rupiah(n) {
 
 export default function MenuClient({ token, table, categories, items, taxPercent, merchant }) {
   const router = useRouter();
-  const [cart, setCart] = useState({}); // { menuId: qty }
-  const [notes, setNotes] = useState({}); // { menuId: note }
+  // Kunci keranjang = `${menuId}|${cookMethod}` supaya 1 menu bisa dipesan
+  // sebagai Grill DAN Steamboat sekaligus sebagai baris terpisah.
+  const [cart, setCart] = useState({}); // { "menuId|method": qty }
+  const [notes, setNotes] = useState({}); // { "menuId|method": note }
   const [showCart, setShowCart] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [orderNote, setOrderNote] = useState('');
@@ -39,7 +41,10 @@ export default function MenuClient({ token, table, categories, items, taxPercent
 
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
-    .map(([id, qty]) => ({ item: itemById[id], qty, note: notes[id] || '' }))
+    .map(([key, qty]) => {
+      const [menuId, method] = key.split('|');
+      return { key, item: itemById[menuId], method: method || null, qty, note: notes[key] || '' };
+    })
     .filter((l) => l.item);
 
   const subtotal = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
@@ -47,12 +52,12 @@ export default function MenuClient({ token, table, categories, items, taxPercent
   const total = subtotal + tax;
   const totalQty = cartLines.reduce((s, l) => s + l.qty, 0);
 
-  function setQty(id, delta) {
+  function setQty(key, delta) {
     setCart((c) => {
-      const next = Math.max(0, (c[id] || 0) + delta);
+      const next = Math.max(0, (c[key] || 0) + delta);
       const copy = { ...c };
-      if (next === 0) delete copy[id];
-      else copy[id] = next;
+      if (next === 0) delete copy[key];
+      else copy[key] = next;
       return copy;
     });
   }
@@ -77,6 +82,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
             menu_item_id: l.item.id,
             qty: l.qty,
             note: l.note,
+            cook_method: l.method,
           })),
         }),
       });
@@ -117,8 +123,11 @@ export default function MenuClient({ token, table, categories, items, taxPercent
               const limits = [it.daily_qty, it.stock_limit].filter((v) => v != null).map(Number);
               const limited = limits.length > 0;
               const remaining = limited ? Math.min(...limits) : null;
-              const inCart = cart[it.id] || 0;
-              const atMax = limited && inCart >= remaining;
+              // Menu Grill & Steamboat punya 2 baris qty terpisah (grill / steamboat);
+              // sisa porsi dihitung dari total keduanya.
+              const methods = it.needs_cook_method ? ['grill', 'steamboat'] : [null];
+              const totalInCart = methods.reduce((s, mth) => s + (cart[`${it.id}|${mth || ''}`] || 0), 0);
+              const atMax = limited && totalInCart >= remaining;
               return (
               <div key={it.id} className="card">
                 <div className="between">
@@ -142,16 +151,41 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                       )}
                     </div>
                   </div>
-                  <div className="qty">
-                    {inCart > 0 && (
-                      <>
-                        <button onClick={() => setQty(it.id, -1)}>−</button>
-                        <span className="bold">{inCart}</span>
-                      </>
-                    )}
-                    <button onClick={() => setQty(it.id, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
-                  </div>
+                  {!it.needs_cook_method && (
+                    <div className="qty">
+                      {totalInCart > 0 && (
+                        <>
+                          <button onClick={() => setQty(`${it.id}|`, -1)}>−</button>
+                          <span className="bold">{totalInCart}</span>
+                        </>
+                      )}
+                      <button onClick={() => setQty(`${it.id}|`, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
+                    </div>
+                  )}
                 </div>
+
+                {it.needs_cook_method && (
+                  <div className="col" style={{ gap: 6, marginTop: 10 }}>
+                    {[{ id: 'grill', label: '🔥 Grill' }, { id: 'steamboat', label: '🍲 Steamboat' }].map((mth) => {
+                      const key = `${it.id}|${mth.id}`;
+                      const q = cart[key] || 0;
+                      return (
+                        <div key={mth.id} className="between">
+                          <span className="small">{mth.label}</span>
+                          <div className="qty">
+                            {q > 0 && (
+                              <>
+                                <button onClick={() => setQty(key, -1)}>−</button>
+                                <span className="bold">{q}</span>
+                              </>
+                            )}
+                            <button onClick={() => setQty(key, 1)} disabled={atMax} style={atMax ? { opacity: 0.4 } : null}>+</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               );
             })}
@@ -197,13 +231,20 @@ export default function MenuClient({ token, table, categories, items, taxPercent
 
             <div className="col">
               {cartLines.map((l) => (
-                <div key={l.item.id} className="card">
+                <div key={l.key} className="card">
                   <div className="between">
-                    <div className="bold">{l.item.name}</div>
+                    <div className="bold">
+                      {l.item.name}
+                      {l.method && (
+                        <span className="badge badge-blue" style={{ marginLeft: 6 }}>
+                          {l.method === 'grill' ? '🔥 Grill' : '🍲 Steamboat'}
+                        </span>
+                      )}
+                    </div>
                     <div className="qty">
-                      <button onClick={() => setQty(l.item.id, -1)}>−</button>
+                      <button onClick={() => setQty(l.key, -1)}>−</button>
                       <span className="bold">{l.qty}</span>
-                      <button onClick={() => setQty(l.item.id, 1)}>+</button>
+                      <button onClick={() => setQty(l.key, 1)}>+</button>
                     </div>
                   </div>
                   <div className="between" style={{ marginTop: 6 }}>
@@ -216,9 +257,9 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                     className="input"
                     style={{ marginTop: 8 }}
                     placeholder="Catatan (mis. tidak pedas)"
-                    value={notes[l.item.id] || ''}
+                    value={notes[l.key] || ''}
                     onChange={(e) =>
-                      setNotes((n) => ({ ...n, [l.item.id]: e.target.value }))
+                      setNotes((n) => ({ ...n, [l.key]: e.target.value }))
                     }
                   />
                 </div>

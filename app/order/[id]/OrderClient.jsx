@@ -130,6 +130,11 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
             <div key={it.id} className="between">
               <div>
                 <span className="bold">{it.qty}×</span> {it.name}
+                {it.cook_method && (
+                  <span className="badge badge-blue" style={{ marginLeft: 6 }}>
+                    {it.cook_method === 'grill' ? '🔥 Grill' : '🍲 Steamboat'}
+                  </span>
+                )}
                 {it.note && <div className="muted small">“{it.note}”</div>}
               </div>
               <span>{rupiah(it.price * it.qty)}</span>

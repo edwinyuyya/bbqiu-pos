@@ -255,6 +255,11 @@ function KitchenPage() {
                     <div key={it.id} className="between" style={{ marginBottom: 6 }}>
                       <div>
                         <span className="bold">{it.qty}×</span> {it.name}
+                        {it.cook_method && (
+                          <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>
+                            {it.cook_method === 'grill' ? '🔥 GRILL' : '🍲 STEAMBOAT'}
+                          </span>
+                        )}
                         {it.note && <div className="muted small">“{it.note}”</div>}
                         <div>
                           <span className={`badge ${it.kitchen_status === 'ready' ? 'badge-green' : 'badge-blue'}`} style={{ fontSize: 10 }}>

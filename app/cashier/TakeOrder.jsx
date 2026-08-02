@@ -45,18 +45,22 @@ export default function TakeOrder({ onCreated }) {
     return byCat.filter((c) => c.items.length);
   }, [categories, menuItems]);
 
+  // Kunci keranjang = `${menuId}|${cookMethod}` (sama seperti menu pelanggan)
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
-    .map(([id, qty]) => ({ item: itemById[id], qty, note: notes[id] || '' }))
+    .map(([key, qty]) => {
+      const [menuId, method] = key.split('|');
+      return { key, item: itemById[menuId], method: method || null, qty, note: notes[key] || '' };
+    })
     .filter((l) => l.item);
   const total = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
   const totalQty = cartLines.reduce((s, l) => s + l.qty, 0);
 
-  function setQty(id, delta) {
+  function setQty(key, delta) {
     setCart((c) => {
-      const next = Math.max(0, (c[id] || 0) + delta);
+      const next = Math.max(0, (c[key] || 0) + delta);
       const copy = { ...c };
-      if (next === 0) delete copy[id]; else copy[id] = next;
+      if (next === 0) delete copy[key]; else copy[key] = next;
       return copy;
     });
   }
@@ -78,7 +82,7 @@ export default function TakeOrder({ onCreated }) {
           token: table.token,
           customer_name: customerName,
           payment_method: payment,
-          items: cartLines.map((l) => ({ menu_item_id: l.item.id, qty: l.qty, note: l.note })),
+          items: cartLines.map((l) => ({ menu_item_id: l.item.id, qty: l.qty, note: l.note, cook_method: l.method })),
         }),
       });
       const data = await res.json();
@@ -136,20 +140,45 @@ export default function TakeOrder({ onCreated }) {
           <div className="h2" style={{ marginBottom: 8 }}>{cat.name}</div>
           <div className="col" style={{ gap: 8 }}>
             {cat.items.map((it) => (
-              <div key={it.id} className="between">
-                <div style={{ flex: 1 }}>
-                  <div className="bold">{it.name}</div>
-                  <div className="muted small">{rupiah(it.price)}</div>
-                </div>
-                <div className="qty">
-                  {cart[it.id] > 0 && (
-                    <>
-                      <button onClick={() => setQty(it.id, -1)}>−</button>
-                      <span className="bold">{cart[it.id]}</span>
-                    </>
+              <div key={it.id}>
+                <div className="between">
+                  <div style={{ flex: 1 }}>
+                    <div className="bold">{it.name}</div>
+                    <div className="muted small">{rupiah(it.price)}</div>
+                  </div>
+                  {!it.needs_cook_method && (
+                    <div className="qty">
+                      {cart[`${it.id}|`] > 0 && (
+                        <>
+                          <button onClick={() => setQty(`${it.id}|`, -1)}>−</button>
+                          <span className="bold">{cart[`${it.id}|`]}</span>
+                        </>
+                      )}
+                      <button onClick={() => setQty(`${it.id}|`, 1)}>+</button>
+                    </div>
                   )}
-                  <button onClick={() => setQty(it.id, 1)}>+</button>
                 </div>
+                {it.needs_cook_method && (
+                  <div className="col" style={{ gap: 4, marginTop: 4, paddingLeft: 10 }}>
+                    {[{ id: 'grill', label: '🔥 Grill' }, { id: 'steamboat', label: '🍲 Steamboat' }].map((mth) => {
+                      const key = `${it.id}|${mth.id}`;
+                      return (
+                        <div key={mth.id} className="between">
+                          <span className="small muted">{mth.label}</span>
+                          <div className="qty">
+                            {cart[key] > 0 && (
+                              <>
+                                <button onClick={() => setQty(key, -1)}>−</button>
+                                <span className="bold">{cart[key]}</span>
+                              </>
+                            )}
+                            <button onClick={() => setQty(key, 1)}>+</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -160,8 +189,11 @@ export default function TakeOrder({ onCreated }) {
         <div className="card" style={{ position: 'sticky', bottom: 10 }}>
           <div className="h2" style={{ marginBottom: 8 }}>Keranjang ({totalQty})</div>
           {cartLines.map((l) => (
-            <div key={l.item.id} className="between small" style={{ marginBottom: 4 }}>
-              <span>{l.qty}× {l.item.name}</span>
+            <div key={l.key} className="between small" style={{ marginBottom: 4 }}>
+              <span>
+                {l.qty}× {l.item.name}
+                {l.method && <b> [{l.method === 'grill' ? 'Grill' : 'Steamboat'}]</b>}
+              </span>
               <span>{rupiah(l.item.price * l.qty)}</span>
             </div>
           ))}

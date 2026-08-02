@@ -76,7 +76,10 @@ export default async function PrintPage({ params }) {
             {s.items.map((it) => (
               <div key={it.id} style={{ marginBottom: 4 }}>
                 <div className="item">
-                  <span><b>{it.qty}x</b> {it.name}</span>
+                  <span>
+                    <b>{it.qty}x</b> {it.name}
+                    {it.cook_method && <b> [{it.cook_method === 'grill' ? 'GRILL' : 'STEAMBOAT'}]</b>}
+                  </span>
                 </div>
                 {it.note && <div style={{ fontStyle: 'italic', paddingLeft: 8 }}>* {it.note}</div>}
               </div>

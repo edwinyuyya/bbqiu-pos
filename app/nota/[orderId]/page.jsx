@@ -39,7 +39,7 @@ export default async function NotaPage({ params }) {
         <div className="line" />
         {(items || []).map((it) => (
           <div key={it.id} style={{ marginBottom: 3 }}>
-            <div>{it.name}</div>
+            <div>{it.name}{it.cook_method ? ` (${it.cook_method === 'grill' ? 'Grill' : 'Steamboat'})` : ''}</div>
             <div className="item">
               <span>{it.qty} x {rupiah(it.price)}</span>
               <span className="rgt">{rupiah(it.qty * it.price)}</span>

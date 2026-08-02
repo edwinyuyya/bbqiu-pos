@@ -48,6 +48,8 @@ create table if not exists menu_items (
 );
 alter table menu_items add column if not exists image_url text;
 alter table menu_items add column if not exists daily_qty integer;
+-- true = pelanggan wajib pilih cara masak (Grill / Steamboat) saat pesan
+alter table menu_items add column if not exists needs_cook_method boolean default false;
 
 -- ---------- ORDER (bill per meja) ----------
 create table if not exists orders (
@@ -93,8 +95,10 @@ create table if not exists order_items (
   note           text,
   station_id     text references stations(id),   -- station tujuan cetak
   kitchen_status text default 'queued',          -- queued | printed | preparing | ready | served
+  cook_method    text,                            -- 'grill' | 'steamboat' (menu Grill & Steamboat)
   created_at     timestamptz default now()
 );
+alter table order_items add column if not exists cook_method text;
 
 -- ---------- ANTRIAN CETAK DAPUR ----------
 create table if not exists print_jobs (

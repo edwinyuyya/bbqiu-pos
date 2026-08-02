@@ -18,9 +18,11 @@ create table if not exists tables (
   id           uuid default gen_random_uuid() primary key,
   table_number text not null unique,    -- nomor / nama meja, mis. "12", "VIP-1"
   token        text not null unique,    -- token unik untuk QR di meja
+  area         text,                    -- area/ruangan, mis. "Outdoor", "Ruang AC", "VIP"
   active       boolean default true,
   created_at   timestamptz default now()
 );
+alter table tables add column if not exists area text;
 
 -- ---------- KATEGORI MENU ----------
 create table if not exists categories (
@@ -179,6 +181,22 @@ insert into tables (table_number, token) values
   ('1',  'meja-1-' || substr(md5(random()::text),1,8)),
   ('2',  'meja-2-' || substr(md5(random()::text),1,8)),
   ('VIP-1', 'meja-vip1-' || substr(md5(random()::text),1,8))
+on conflict (table_number) do nothing;
+
+-- Layout meja BBQIU: 4 Outdoor, 8 Ruang AC, 4 VIP
+insert into tables (table_number, token, area)
+select 'Outdoor ' || gs, 'meja-outdoor-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'Outdoor'
+from generate_series(1, 4) as gs
+on conflict (table_number) do nothing;
+
+insert into tables (table_number, token, area)
+select 'AC ' || gs, 'meja-ac-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'Ruang AC'
+from generate_series(1, 8) as gs
+on conflict (table_number) do nothing;
+
+insert into tables (table_number, token, area)
+select 'VIP ' || gs, 'meja-vip-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'VIP'
+from generate_series(1, 4) as gs
 on conflict (table_number) do nothing;
 
 -- ============================================================

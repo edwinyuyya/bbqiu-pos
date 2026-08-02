@@ -10,7 +10,7 @@ export default async function QrCardPage({ params }) {
 
   const { data: table } = await db
     .from('tables')
-    .select('table_number, token')
+    .select('table_number, token, area')
     .eq('token', token)
     .single();
 
@@ -34,6 +34,9 @@ export default async function QrCardPage({ params }) {
         <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 800, margin: '4px 0' }}>
           MEJA {table.table_number}
         </div>
+        {table.area && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#666', marginTop: -4 }}>{table.area}</div>
+        )}
         <div style={{ textAlign: 'center', margin: '8px 0' }}>Scan untuk lihat menu &amp; pesan</div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={dataUrl} alt="QR meja" style={{ width: 280, height: 280, display: 'block', margin: '0 auto' }} />

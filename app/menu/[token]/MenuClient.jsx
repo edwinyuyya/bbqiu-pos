@@ -120,9 +120,13 @@ export default function MenuClient({ token, table, categories, items, taxPercent
           <h2 className="h2" style={{ marginBottom: 10 }}>{cat.name}</h2>
           <div className="col">
             {cat.items.map((it) => {
-              const limits = [it.daily_qty, it.stock_limit].filter((v) => v != null).map(Number);
-              const limited = limits.length > 0;
-              const remaining = limited ? Math.min(...limits) : null;
+              // HANYA daily_qty (batas porsi manual) yang boleh memblokir order.
+              // Sisa dari stok bahan sengaja cuma info: sistem resep memang
+              // dikonfigurasi boleh minus, jadi stok bahan yang belum diinput
+              // (0) tidak boleh bikin menu jadi tidak bisa dipesan.
+              const limited = it.daily_qty != null;
+              const remaining = limited ? Number(it.daily_qty) : null;
+              const stockLeft = it.stock_limit != null && it.stock_limit > 0 ? Number(it.stock_limit) : null;
               // Menu Grill & Steamboat punya 2 baris qty terpisah (grill / steamboat);
               // sisa porsi dihitung dari total keduanya.
               const methods = it.needs_cook_method ? ['grill', 'steamboat'] : [null];
@@ -148,6 +152,9 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                         <div className="badge badge-amber" style={{ marginTop: 6 }}>
                           {remaining > 0 ? `sisa ${remaining} porsi` : 'habis'}
                         </div>
+                      )}
+                      {!limited && stockLeft != null && (
+                        <div className="badge" style={{ marginTop: 6 }}>sisa {stockLeft}</div>
                       )}
                     </div>
                   </div>

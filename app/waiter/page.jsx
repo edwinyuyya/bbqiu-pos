@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import TablesTab from '../admin/TablesTab';
 import AvailabilityTab from './AvailabilityTab';
+import { stockLimitByMenu, attachStockLimit } from '../../lib/stockLimit';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
@@ -63,10 +64,25 @@ function WaiterPage() {
     const [t, m] = await Promise.all([
       supabase.from('tables').select('*').order('table_number'),
       // Hanya ambil kolom yang aman ditampilkan waiter (TIDAK ada cost/HPP di sini)
-      supabase.from('menu_items').select('id, name, price, available').order('sort_order'),
+      supabase
+        .from('menu_items')
+        .select('id, name, price, available, daily_qty, category_id')
+        .order('sort_order'),
     ]);
     setTables(t.data || []);
-    setItems(m.data || []);
+
+    // Sisa porsi dari stok bahan. recipe_items -> inventory_items(stock_qty)
+    // saja: tidak ada harga/HPP bahan yang ikut terbawa ke layar waiter.
+    const menu = m.data || [];
+    let byMenu = {};
+    if (menu.length) {
+      const { data: recipeRows } = await supabase
+        .from('recipe_items')
+        .select('menu_item_id, qty, inventory_items(stock_qty)')
+        .in('menu_item_id', menu.map((i) => i.id));
+      byMenu = stockLimitByMenu(recipeRows);
+    }
+    setItems(attachStockLimit(menu, byMenu));
   }, []);
   useEffect(() => { load(); }, [load]);
 

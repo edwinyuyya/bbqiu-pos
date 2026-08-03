@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import TablesTab from '../admin/TablesTab';
 import AvailabilityTab from './AvailabilityTab';
+import AntrianTab from './AntrianTab';
 import { stockLimitByMenu, attachStockLimit } from '../../lib/stockLimit';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -53,10 +54,13 @@ function WaiterPage() {
   const [tables, setTables] = useState([]);
   const [items, setItems] = useState([]);
   const [calls, setCalls] = useState([]);
+  const [antrian, setAntrian] = useState([]);
+  const [mejaTerpakai, setMejaTerpakai] = useState({});
   const [origin, setOrigin] = useState('');
   const [soundOn, setSoundOn] = useState(false);
   const audioCtxRef = useRef(null);
   const seenCallIds = useRef(null);
+  const seenAntriIds = useRef(null);
 
   useEffect(() => { setOrigin(window.location.origin); }, []);
 
@@ -97,6 +101,24 @@ function WaiterPage() {
     return () => clearInterval(t);
   }, [loadCalls]);
 
+  // Antrian + status keterisian meja (dari order yang masih open).
+  const loadAntrian = useCallback(async () => {
+    const [r, o] = await Promise.all([
+      fetch('/api/waiting-list?status=aktif'),
+      supabase.from('orders').select('table_id, created_at').eq('status', 'open'),
+    ]);
+    const d = await r.json();
+    setAntrian(d.antrian || []);
+    const terpakai = {};
+    for (const row of o.data || []) if (row.table_id) terpakai[row.table_id] = row.created_at;
+    setMejaTerpakai(terpakai);
+  }, []);
+  useEffect(() => {
+    loadAntrian();
+    const t = setInterval(loadAntrian, 10000);
+    return () => clearInterval(t);
+  }, [loadAntrian]);
+
   // Alert suara saat ada panggilan baru (pola sama dengan Kitchen Display).
   useEffect(() => {
     // Jaga-jaga: browser bisa auto-suspend AudioContext kalau tab lama idle.
@@ -113,6 +135,20 @@ function WaiterPage() {
       speak(`Meja ${newOnes[0].table_number} memanggil waiter`);
     }
   }, [calls, soundOn]);
+
+  // Alert suara saat ada pendaftar antrian baru.
+  useEffect(() => {
+    const menunggu = antrian.filter((a) => a.status === 'waiting');
+    const currentIds = new Set(menunggu.map((a) => a.id));
+    if (seenAntriIds.current === null) { seenAntriIds.current = currentIds; return; }
+    const newOnes = menunggu.filter((a) => !seenAntriIds.current.has(a.id));
+    seenAntriIds.current = currentIds;
+    if (!newOnes.length) return;
+    if (soundOn && audioCtxRef.current) {
+      beep(audioCtxRef.current);
+      speak(`Antrian baru nomor ${newOnes[0].queue_no}, ${newOnes[0].party_size} orang`);
+    }
+  }, [antrian, soundOn]);
 
   function enableSound() {
     try {
@@ -151,6 +187,10 @@ function WaiterPage() {
         <button className={`btn ${tab === 'calls' ? 'btn-brand' : ''}`} onClick={() => setTab('calls')}>
           🔔 Panggilan {calls.length > 0 ? `(${calls.length})` : ''}
         </button>
+        <button className={`btn ${tab === 'antri' ? 'btn-brand' : ''}`} onClick={() => setTab('antri')}>
+          📝 Antrian {antrian.filter((a) => a.status === 'waiting').length > 0
+            ? `(${antrian.filter((a) => a.status === 'waiting').length})` : ''}
+        </button>
         <button className={`btn ${tab === 'tables' ? 'btn-brand' : ''}`} onClick={() => setTab('tables')}>Meja &amp; QR</button>
         <button className={`btn ${tab === 'avail' ? 'btn-brand' : ''}`} onClick={() => setTab('avail')}>Ketersediaan Menu</button>
       </div>
@@ -171,6 +211,14 @@ function WaiterPage() {
             </div>
           ))}
         </div>
+      )}
+      {tab === 'antri' && (
+        <AntrianTab
+          antrian={antrian}
+          tables={tables}
+          mejaTerpakai={mejaTerpakai}
+          reload={loadAntrian}
+        />
       )}
       {tab === 'tables' && <TablesTab tables={tables} origin={origin} reload={load} />}
       {tab === 'avail' && <AvailabilityTab items={items} reload={load} />}

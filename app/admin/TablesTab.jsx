@@ -14,6 +14,7 @@ function randToken(prefix) {
 export default function TablesTab({ tables, origin, reload }) {
   const [num, setNum] = useState('');
   const [area, setArea] = useState('');
+  const [seats, setSeats] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function addTable() {
@@ -23,11 +24,23 @@ export default function TablesTab({ tables, origin, reload }) {
       table_number: num.trim(),
       token: randToken(`meja-${num.trim().toLowerCase()}`),
       area: area || null,
+      seats: seats === '' ? null : Math.max(1, parseInt(seats, 10) || 0) || null,
     });
-    setNum(''); setArea('');
+    setNum(''); setArea(''); setSeats('');
     await reload();
     setBusy(false);
   }
+
+  // Kapasitas kursi dipakai sistem antrian untuk mencocokkan rombongan
+  // dengan meja. Disimpan begitu kolom kehilangan fokus.
+  async function simpanSeats(t, nilai) {
+    const angka = nilai === '' ? null : Math.max(1, parseInt(nilai, 10) || 0) || null;
+    if (angka === (t.seats ?? null)) return;
+    await supabase.from('tables').update({ seats: angka }).eq('id', t.id);
+    reload();
+  }
+
+  const belumIsiKursi = tables.filter((t) => t.seats == null).length;
 
   const grouped = useMemo(() => {
     const byArea = {};
@@ -54,14 +67,34 @@ export default function TablesTab({ tables, origin, reload }) {
             <option value="">— Area (opsional) —</option>
             {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+          <input
+            className="input" style={{ maxWidth: 130 }} inputMode="numeric"
+            placeholder="Kursi" value={seats} onChange={(e) => setSeats(e.target.value)}
+          />
           <button className="btn btn-brand" disabled={busy} onClick={addTable}>Tambah</button>
         </div>
       </div>
 
+      {belumIsiKursi > 0 && (
+        <div className="card">
+          <p className="small" style={{ margin: 0 }}>
+            <b>{belumIsiKursi} meja belum diisi kapasitas kursinya.</b> Sistem antrian
+            memakai angka ini untuk mencocokkan rombongan dengan meja — selama masih
+            kosong, meja itu dianggap muat berapa pun orangnya. Isi di kolom “kursi”
+            pada kartu meja di bawah.
+          </p>
+        </div>
+      )}
+
       {tables.length > 0 && (
-        <Link href="/admin/qr" target="_blank" className="btn btn-brand btn-block no-print">
-          🖨️ Cetak Semua QR Meja ({tables.length})
-        </Link>
+        <div className="row no-print" style={{ flexWrap: 'wrap' }}>
+          <Link href="/admin/qr" target="_blank" className="btn btn-brand" style={{ flex: 1 }}>
+            🖨️ Cetak Semua QR Meja ({tables.length})
+          </Link>
+          <Link href="/admin/qr-antri" target="_blank" className="btn" style={{ flex: 1 }}>
+            📝 Cetak QR Antrian (pintu masuk)
+          </Link>
+        </div>
       )}
 
       {grouped.map(([areaName, list]) => (
@@ -75,6 +108,17 @@ export default function TablesTab({ tables, origin, reload }) {
                   <div className="between">
                     <span className="bold">Meja {t.table_number}</span>
                     <span className={`badge ${t.active ? 'badge-green' : 'badge-red'}`}>{t.active ? 'Aktif' : 'Nonaktif'}</span>
+                  </div>
+                  <div className="between no-print" style={{ marginTop: 8 }}>
+                    <span className="muted small">Kapasitas kursi</span>
+                    <input
+                      className="input"
+                      style={{ maxWidth: 90, textAlign: 'center', padding: '6px 8px' }}
+                      inputMode="numeric"
+                      placeholder="—"
+                      defaultValue={t.seats ?? ''}
+                      onBlur={(e) => simpanSeats(t, e.target.value)}
+                    />
                   </div>
                   {origin && (
                     // eslint-disable-next-line @next/next/no-img-element

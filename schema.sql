@@ -19,10 +19,12 @@ create table if not exists tables (
   table_number text not null unique,    -- nomor / nama meja, mis. "12", "VIP-1"
   token        text not null unique,    -- token unik untuk QR di meja
   area         text,                    -- area/ruangan, mis. "Outdoor", "Ruang AC", "VIP"
+  seats        int,                     -- kapasitas kursi (dipakai sistem antrian)
   active       boolean default true,
   created_at   timestamptz default now()
 );
 alter table tables add column if not exists area text;
+alter table tables add column if not exists seats int;
 
 -- ---------- KATEGORI MENU ----------
 create table if not exists categories (
@@ -404,6 +406,38 @@ drop policy if exists "allow all waiter_calls" on waiter_calls;
 create policy "allow all waiter_calls" on waiter_calls for all using (true) with check (true);
 
 grant select, insert, update, delete on waiter_calls to anon, authenticated;
+notify pgrst, 'reload schema';
+
+-- ============================================================
+--  ANTRIAN TUNGGU (walk-in waiting list)
+-- ============================================================
+create table if not exists waiting_list (
+  id            uuid default gen_random_uuid() primary key,
+  queue_date    date not null default (now() at time zone 'Asia/Jakarta')::date,
+  queue_no      int  not null,                    -- nomor antrian, reset tiap hari (WIB)
+  customer_name text not null,
+  phone         text,
+  party_size    int  not null default 2,
+  area_pref     text,                             -- null = area bebas
+  note          text,
+  status        text not null default 'waiting',  -- waiting | called | seated | no_show | cancelled
+  table_id      uuid references tables(id),       -- meja yang diberikan saat dipanggil
+  device_key    text,                             -- kenali scan ulang dari HP yang sama
+  created_at    timestamptz default now(),
+  called_at     timestamptz,
+  seated_at     timestamptz,
+  closed_at     timestamptz
+);
+create index if not exists idx_waitinglist_status on waiting_list(status, created_at);
+create index if not exists idx_waitinglist_device on waiting_list(device_key, status);
+-- penjaga sebenarnya kalau dua orang mendaftar bersamaan
+create unique index if not exists idx_waitinglist_no on waiting_list(queue_date, queue_no);
+
+alter table waiting_list enable row level security;
+drop policy if exists "allow all waiting_list" on waiting_list;
+create policy "allow all waiting_list" on waiting_list for all using (true) with check (true);
+
+grant select, insert, update, delete on waiting_list to anon, authenticated;
 notify pgrst, 'reload schema';
 
 -- ============================================================

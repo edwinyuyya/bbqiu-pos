@@ -35,6 +35,7 @@ export default function TakeOrder({ onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null); // { order_id, order_no }
+  const [cari, setCari] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -51,10 +52,19 @@ export default function TakeOrder({ onCreated }) {
   }, []);
 
   const itemById = useMemo(() => Object.fromEntries(menuItems.map((i) => [i.id, i])), [menuItems]);
+
+  // Pencarian menu. Menu sudah 121 item, menggulir kategori satu per satu
+  // terlalu lambat saat kasir sedang antre.
+  const cocokCari = useMemo(() => {
+    const q = cari.trim().toLowerCase();
+    if (!q) return menuItems;
+    return menuItems.filter((i) => i.name.toLowerCase().includes(q));
+  }, [menuItems, cari]);
+
   const grouped = useMemo(() => {
-    const byCat = categories.map((c) => ({ ...c, items: menuItems.filter((i) => i.category_id === c.id) }));
+    const byCat = categories.map((c) => ({ ...c, items: cocokCari.filter((i) => i.category_id === c.id) }));
     return byCat.filter((c) => c.items.length);
-  }, [categories, menuItems]);
+  }, [categories, cocokCari]);
 
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
@@ -154,6 +164,38 @@ export default function TakeOrder({ onCreated }) {
           </div>
         </div>
       </div>
+
+      <div className="card" style={{ position: 'sticky', top: 0, zIndex: 6 }}>
+        <input
+          className="input"
+          type="search"
+          placeholder="Cari menu… (mis. karubi, teh, sate)"
+          value={cari}
+          onChange={(e) => setCari(e.target.value)}
+        />
+        <div className="between" style={{ marginTop: 6 }}>
+          <span className="muted small">
+            {cari.trim()
+              ? `${cocokCari.length} dari ${menuItems.length} menu`
+              : `${menuItems.length} menu`}
+          </span>
+          {cari.trim() && (
+            <button
+              className="btn"
+              style={{ padding: '4px 10px', fontSize: 13 }}
+              onClick={() => setCari('')}
+            >
+              Hapus pencarian
+            </button>
+          )}
+        </div>
+      </div>
+
+      {cari.trim() && grouped.length === 0 && (
+        <div className="card">
+          <p className="muted" style={{ margin: 0 }}>Tidak ada menu yang cocok dengan “{cari}”.</p>
+        </div>
+      )}
 
       {grouped.map((cat) => (
         <div key={cat.id} className="card">

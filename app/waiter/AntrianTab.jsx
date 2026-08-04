@@ -6,6 +6,27 @@ import {
   mejaCocok,
   menitSejak,
 } from '../../lib/waitingList';
+import { linkWA, nomorWA, pesanHampirGiliran, pesanMejaSiap } from '../../lib/wa';
+
+const MERCHANT = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'BBQIU';
+
+// Tombol WhatsApp semi otomatis: buka WhatsApp dengan pesan sudah terisi,
+// staf tinggal tekan kirim. Kalau nomornya kosong/salah, tombol tidak
+// ditampilkan supaya tidak membuka chat kosong.
+function TombolWA({ nomor, pesan, label, utama }) {
+  const link = linkWA(nomor, pesan);
+  if (!link) return null;
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`btn ${utama ? 'btn-green' : ''}`}
+    >
+      💬 {label}
+    </a>
+  );
+}
 
 function jamWIB(iso) {
   if (!iso) return '';
@@ -22,7 +43,8 @@ function lamaTeks(menit) {
   return `${Math.floor(m / 60)} jam ${m % 60} menit`;
 }
 
-export default function AntrianTab({ antrian, tables, mejaTerpakai, reload }) {
+export default function AntrianTab({ antrian, tables, mejaTerpakai, reload, origin }) {
+  const linkStatus = (id) => (origin ? `${origin}/antri/${id}` : null);
   const [busy, setBusy] = useState('');
   const [pilihMeja, setPilihMeja] = useState({}); // { entriId: tableId }
 
@@ -86,6 +108,20 @@ export default function AntrianTab({ antrian, tables, mejaTerpakai, reload }) {
               </span>
             </div>
             <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+              <TombolWA
+                utama
+                nomor={a.phone}
+                label="Kabari via WA"
+                pesan={pesanMejaSiap({
+                  nama: a.customer_name,
+                  queueNo: a.queue_no,
+                  meja: meja?.table_number || '-',
+                  area: meja?.area,
+                  tenggatMenit: TENGGAT_PANGGIL_MENIT,
+                  merchant: MERCHANT,
+                  link: linkStatus(a.id),
+                })}
+              />
               <button className="btn btn-green" disabled={busy === a.id} onClick={() => ubah(a, 'seated')}>
                 ✅ Sudah duduk
               </button>
@@ -117,44 +153,63 @@ export default function AntrianTab({ antrian, tables, mejaTerpakai, reload }) {
                   {' · '}menunggu {lamaTeks(menitSejak(a.created_at))}
                 </div>
                 {a.note && <div className="muted small">“{a.note}”</div>}
-                {a.phone && <div className="muted small">{a.phone}</div>}
+                <div className="muted small">
+                  {nomorWA(a.phone) ? a.phone : 'Tanpa nomor WA — panggil langsung / lewat pengeras suara'}
+                </div>
               </div>
               <span className="badge">{i === 0 ? 'Paling depan' : `Urutan ${i + 1}`}</span>
             </div>
 
-            {cocok.length === 0 ? (
+            {cocok.length === 0 && (
               <p className="muted small" style={{ marginTop: 10, marginBottom: 0 }}>
                 Belum ada meja kosong yang muat {a.party_size} orang
                 {a.area_pref ? ` di area ${a.area_pref}` : ''}.
               </p>
-            ) : (
-              <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-                <select
-                  className="select"
-                  style={{ maxWidth: 220 }}
-                  value={terpilih}
-                  onChange={(e) => setPilihMeja((p) => ({ ...p, [a.id]: e.target.value }))}
-                >
-                  {cocok.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Meja {t.table_number}
-                      {t.seats ? ` (${t.seats} kursi)` : ''}
-                      {t.area ? ` · ${t.area}` : ''}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="btn btn-brand"
-                  disabled={busy === a.id || !terpilih}
-                  onClick={() => ubah(a, 'called', terpilih)}
-                >
-                  📣 Panggil
-                </button>
-                <button className="btn" disabled={busy === a.id} onClick={() => ubah(a, 'cancelled')}>
-                  Batalkan
-                </button>
-              </div>
             )}
+
+            <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+              {cocok.length > 0 && (
+                <>
+                  <select
+                    className="select"
+                    style={{ maxWidth: 220 }}
+                    value={terpilih}
+                    onChange={(e) => setPilihMeja((p) => ({ ...p, [a.id]: e.target.value }))}
+                  >
+                    {cocok.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        Meja {t.table_number}
+                        {t.seats ? ` (${t.seats} kursi)` : ''}
+                        {t.area ? ` · ${t.area}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn btn-brand"
+                    disabled={busy === a.id || !terpilih}
+                    onClick={() => ubah(a, 'called', terpilih)}
+                  >
+                    📣 Panggil
+                  </button>
+                </>
+              )}
+              {/* Kabar "hampir giliran" justru paling berguna saat meja belum
+                  ada — makanya tombol ini di luar cabang meja kosong. */}
+              <TombolWA
+                nomor={a.phone}
+                label="Kabari hampir giliran"
+                pesan={pesanHampirGiliran({
+                  nama: a.customer_name,
+                  queueNo: a.queue_no,
+                  sisaDepan: i,
+                  merchant: MERCHANT,
+                  link: linkStatus(a.id),
+                })}
+              />
+              <button className="btn" disabled={busy === a.id} onClick={() => ubah(a, 'cancelled')}>
+                Batalkan
+              </button>
+            </div>
           </div>
         );
       })}

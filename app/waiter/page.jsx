@@ -218,6 +218,7 @@ function WaiterPage() {
           tables={tables}
           mejaTerpakai={mejaTerpakai}
           reload={loadAntrian}
+          origin={origin}
         />
       )}
       {tab === 'tables' && <TablesTab tables={tables} origin={origin} reload={load} />}

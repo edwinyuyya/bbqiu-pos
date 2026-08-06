@@ -1,0 +1,604 @@
+/* ==========================================================================
+   Sistem desain — gelap, tenang, tidak norak.
+   Warna dan ukuran dipusatkan di :root supaya sekali ganti, seluruh situs ikut.
+   ========================================================================== */
+
+:root {
+  --bg: #0e1114;
+  --bg-2: #141920;
+  --surface: #181e26;
+  --surface-2: #1f2731;
+  --garis: #2b3441;
+  --garis-terang: #3a4553;
+
+  --teks: #e9e6df;
+  --teks-lembut: #a8b0ba;
+  --teks-redup: #78828e;
+
+  --emas: #c9a227;
+  --emas-terang: #e0bf55;
+  --nila: #47688f;
+  --bata: #a4593c;
+
+  --lebar: 1180px;
+  --radius: 14px;
+  --radius-kecil: 8px;
+
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --bayang: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--teks);
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Tekstur halus supaya latar hitam tidak terasa mati */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(900px 500px at 12% -8%, rgba(71, 104, 143, 0.16), transparent 62%),
+    radial-gradient(700px 420px at 92% 4%, rgba(201, 162, 39, 0.09), transparent 60%);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--serif);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5em;
+}
+
+h1 {
+  font-size: clamp(2.1rem, 5.2vw, 3.5rem);
+}
+h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+}
+h3 {
+  font-size: clamp(1.15rem, 2.2vw, 1.4rem);
+}
+
+p {
+  margin: 0 0 1.05em;
+}
+
+a {
+  color: var(--emas-terang);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ---- Tata letak ---------------------------------------------------------- */
+
+.bungkus {
+  width: 100%;
+  max-width: var(--lebar);
+  margin: 0 auto;
+  padding: 0 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.bagian {
+  padding: clamp(56px, 8vw, 96px) 0;
+  position: relative;
+  z-index: 1;
+}
+
+.bagian-alt {
+  background: var(--bg-2);
+  border-top: 1px solid var(--garis);
+  border-bottom: 1px solid var(--garis);
+}
+
+.kisi {
+  display: grid;
+  gap: 22px;
+}
+/* Nilai bawaan `min-width: auto` membuat isi yang lebar melebarkan kolomnya.
+   Ini mencegah halaman ikut melebar gara-gara satu tabel atau gambar. */
+.kisi > * {
+  min-width: 0;
+}
+.kisi-2 {
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+}
+.kisi-3 {
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+}
+
+/* ---- Elemen kecil -------------------------------------------------------- */
+
+.kop {
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--emas);
+  margin-bottom: 14px;
+  display: block;
+}
+
+.utama {
+  color: var(--teks-lembut);
+  font-size: 1.06rem;
+  max-width: 62ch;
+}
+
+.pil {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--garis-terang);
+  color: var(--teks-lembut);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pil-emas {
+  border-color: rgba(201, 162, 39, 0.5);
+  color: var(--emas-terang);
+  background: rgba(201, 162, 39, 0.09);
+}
+
+.tombol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 13px 26px;
+  border-radius: var(--radius-kecil);
+  font-weight: 600;
+  font-size: 0.96rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+  font-family: var(--sans);
+}
+.tombol:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.tombol-utama {
+  background: var(--emas);
+  color: #14100a;
+}
+.tombol-utama:hover {
+  background: var(--emas-terang);
+}
+
+.tombol-garis {
+  border-color: var(--garis-terang);
+  color: var(--teks);
+  background: rgba(255, 255, 255, 0.02);
+}
+.tombol-garis:hover {
+  border-color: var(--emas);
+  color: var(--emas-terang);
+}
+
+.tombol-wa {
+  background: #1f7a4d;
+  color: #fff;
+}
+.tombol-wa:hover {
+  background: #24925c;
+}
+
+/* ---- Kartu --------------------------------------------------------------- */
+
+.kartu {
+  background: var(--surface);
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.kartu:hover {
+  border-color: var(--garis-terang);
+  transform: translateY(-2px);
+}
+
+.kartu-isi {
+  padding: 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.kartu-judul {
+  font-family: var(--serif);
+  font-size: 1.28rem;
+  margin: 0 0 6px;
+  color: var(--teks);
+}
+
+.kartu-lokasi {
+  font-size: 0.84rem;
+  color: var(--teks-redup);
+  margin-bottom: 12px;
+}
+
+.kartu-ringkas {
+  color: var(--teks-lembut);
+  font-size: 0.93rem;
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.kartu-kaki {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--garis);
+  font-size: 0.85rem;
+  color: var(--teks-redup);
+}
+
+/* ---- Daftar bercentang --------------------------------------------------- */
+
+.daftar-centang {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.daftar-centang li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--teks-lembut);
+  font-size: 0.93rem;
+}
+.daftar-centang li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emas);
+}
+
+.daftar-silang li::before {
+  background: transparent;
+  border: 1px solid var(--teks-redup);
+}
+
+/* ---- Catatan / peringatan ------------------------------------------------ */
+
+.catatan {
+  border-left: 3px solid var(--bata);
+  background: rgba(164, 89, 60, 0.09);
+  padding: 16px 20px;
+  border-radius: 0 var(--radius-kecil) var(--radius-kecil) 0;
+  color: var(--teks-lembut);
+  font-size: 0.93rem;
+}
+.catatan strong {
+  color: var(--teks);
+}
+
+.catatan-emas {
+  border-left-color: var(--emas);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+/* ---- Navigasi ------------------------------------------------------------ */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(14, 17, 20, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--garis);
+}
+
+.nav-isi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  height: 68px;
+}
+
+.merek {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--teks);
+  letter-spacing: 0.01em;
+}
+.merek:hover {
+  text-decoration: none;
+  color: var(--emas-terang);
+}
+
+.nav-tautan {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.nav-tautan a {
+  color: var(--teks-lembut);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+.nav-tautan a:hover {
+  color: var(--emas-terang);
+  text-decoration: none;
+}
+
+/* `.nav-tautan a` lebih spesifik daripada `.tombol-utama`, jadi tanpa dua aturan
+   di bawah ini teks tombol WhatsApp ikut memakai warna tautan navigasi dan
+   nyaris tak terbaca di atas latar emas. */
+.nav-tautan a.tombol-utama,
+.nav-tautan a.tombol-utama:hover {
+  color: #14100a;
+}
+.nav-tautan a.tombol-wa,
+.nav-tautan a.tombol-wa:hover {
+  color: #fff;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--garis-terang);
+  color: var(--teks);
+  border-radius: var(--radius-kecil);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 880px) {
+  .nav-tautan {
+    display: none;
+  }
+  .nav-tautan.buka {
+    display: flex;
+    position: absolute;
+    top: 68px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--garis);
+    padding: 8px 22px 18px;
+  }
+  .nav-tautan.buka a {
+    padding: 12px 0;
+    width: 100%;
+    border-bottom: 1px solid var(--garis);
+    font-size: 1rem;
+  }
+  .nav-tautan.buka .tombol {
+    margin-top: 14px;
+    width: 100%;
+    border-bottom: none;
+  }
+  .nav-toggle {
+    display: block;
+  }
+}
+
+/* ---- Kaki halaman -------------------------------------------------------- */
+
+.kaki {
+  background: var(--bg-2);
+  border-top: 1px solid var(--garis);
+  padding: 56px 0 30px;
+  position: relative;
+  z-index: 1;
+}
+
+.kaki-kisi {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 760px) {
+  .kaki-kisi {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+.kaki h4 {
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--emas);
+  margin-bottom: 14px;
+}
+
+.kaki-daftar {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.kaki-daftar a {
+  color: var(--teks-lembut);
+  font-size: 0.92rem;
+}
+
+.kaki-bawah {
+  margin-top: 40px;
+  padding-top: 22px;
+  border-top: 1px solid var(--garis);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  color: var(--teks-redup);
+  font-size: 0.84rem;
+}
+
+/* ---- Tabel --------------------------------------------------------------- */
+
+.tabel-gulir {
+  overflow-x: auto;
+  border: 1px solid var(--garis);
+  border-radius: var(--radius);
+  /* Tanpa dua baris ini, tabel lebar mendorong seluruh halaman melebar di ponsel
+     alih-alih menggulir di dalam wadahnya sendiri. */
+  max-width: 100%;
+  min-width: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+  font-size: 0.93rem;
+}
+
+th,
+td {
+  padding: 13px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--garis);
+}
+
+th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--teks);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+td {
+  color: var(--teks-lembut);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---- Formulir / kalkulator ---------------------------------------------- */
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--teks-lembut);
+  margin-bottom: 7px;
+}
+
+select,
+input[type='number'],
+input[type='text'],
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--garis-terang);
+  border-radius: var(--radius-kecil);
+  color: var(--teks);
+  font-size: 0.96rem;
+  font-family: var(--sans);
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--emas);
+}
+
+/* Tata letak dua kolom pada halaman detail destinasi & kalkulator */
+.tata-detail > * {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .tata-detail {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .tata-detail aside {
+    position: static !important;
+  }
+}
+
+/* ---- Bantuan ------------------------------------------------------------- */
+
+.tengah {
+  text-align: center;
+}
+.rapat {
+  max-width: 74ch;
+}
+.tengah .utama {
+  margin-left: auto;
+  margin-right: auto;
+}
+.tumpuk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.tumpuk-tengah {
+  justify-content: center;
+}
+.jarak-atas {
+  margin-top: 30px;
+}
+.jarak-atas-besar {
+  margin-top: 48px;
+}

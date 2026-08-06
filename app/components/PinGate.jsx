@@ -8,13 +8,17 @@ export default function PinGate({ scope = 'staff', title = 'Masuk Staf', childre
   const [pin, setPin] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [catatan, setCatatan] = useState([]);
   const key = `pin_ok_${scope}`;
 
   useEffect(() => {
     if (sessionStorage.getItem(key) === '1') { setState('open'); return; }
     fetch(`/api/pin?scope=${scope}`)
       .then((r) => r.json())
-      .then((d) => setState(d.required ? 'locked' : 'open'))
+      .then((d) => {
+        setCatatan(d.catatan || []);
+        setState(d.required ? 'locked' : 'open');
+      })
       .catch(() => setState('locked'));
   }, [scope, key]);
 
@@ -50,6 +54,17 @@ export default function PinGate({ scope = 'staff', title = 'Masuk Staf', childre
         />
         <div className="small" style={{ color: '#ff8585', minHeight: 18, margin: '4px 0' }}>{err}</div>
         <button className="btn btn-brand btn-block" disabled={busy}>{busy ? 'Memeriksa…' : 'Masuk'}</button>
+
+        {/* Petunjuk kalau env var-nya salah pasang. Hanya menyebut jenis
+            masalahnya, tidak pernah isi PIN-nya. */}
+        {catatan.length > 0 && (
+          <div className="small muted" style={{ marginTop: 12, textAlign: 'left' }}>
+            <b>Catatan konfigurasi:</b>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+              {catatan.map((c) => <li key={c}>{c}</li>)}
+            </ul>
+          </div>
+        )}
       </form>
     </div>
   );

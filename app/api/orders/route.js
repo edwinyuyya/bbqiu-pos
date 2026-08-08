@@ -3,6 +3,7 @@ import { supabaseServer } from '../../../lib/supabaseServer';
 import { taxPercent } from '../../../lib/tax';
 import { COOK_METHOD_IDS, DRINK_TEMP_IDS, SWEETNESS_IDS } from '../../../lib/variants';
 import { STATION_GORENG } from '../../../lib/stations';
+import { recalcOrder } from '../../../lib/recalcOrder';
 
 export const dynamic = 'force-dynamic';
 
@@ -219,6 +220,10 @@ export async function POST(req) {
   // Antrian cetak dapur dicatat per gelombang, supaya struk tambahan hanya
   // memuat pesanan barunya saja.
   await db.from('print_jobs').insert({ order_id: order.id, status: 'pending', batch_no: batchNo });
+
+  // Hitung ulang lewat jalur yang sama dengan promo & pembatalan item, supaya
+  // diskon per menu langsung terpasang dan tidak ada dua rumus total.
+  await recalcOrder(db, order.id);
 
   // 7) Kurangi sisa porsi (menu berporsi terbatas). Auto-tutup saat 0.
   for (const m of menu || []) {

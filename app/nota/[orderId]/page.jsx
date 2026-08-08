@@ -54,6 +54,12 @@ export default async function NotaPage({ params }) {
         ))}
         <div className="line" />
         <div className="item"><span>Subtotal</span><span className="rgt">{rupiah(order.subtotal)}</span></div>
+        {Number(order.discount) > 0 && (
+          <div className="item">
+            <span>Diskon{order.promo_code ? ` (${order.promo_code})` : ''}</span>
+            <span className="rgt">- {rupiah(order.discount)}</span>
+          </div>
+        )}
         {Number(order.tax) > 0 && (
           <div className="item"><span>PB1 {taxPercent()}%</span><span className="rgt">{rupiah(order.tax)}</span></div>
         )}

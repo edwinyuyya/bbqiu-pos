@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import AlertsPanel from '../components/AlertsPanel';
 import TablesTab from './TablesTab';
+import PromoTab from './PromoTab';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -40,6 +41,7 @@ function AdminPage() {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [promos, setPromos] = useState([]);
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
@@ -47,18 +49,20 @@ function AdminPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const [s, t, c, m, invRes] = await Promise.all([
+    const [s, t, c, m, invRes, pr] = await Promise.all([
       supabase.from('stations').select('*').order('sort_order'),
       supabase.from('tables').select('*').order('table_number'),
       supabase.from('categories').select('*').order('sort_order'),
       supabase.from('menu_items').select('*').order('sort_order'),
       fetch('/api/inventory').then((r) => r.json()).catch(() => ({ items: [] })),
+      supabase.from('promos').select('*').order('created_at', { ascending: false }),
     ]);
     setStations(s.data || []);
     setTables(t.data || []);
     setCategories(c.data || []);
     setItems(m.data || []);
     setInventory(invRes.items || []);
+    setPromos(pr.data || []);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -68,7 +72,7 @@ function AdminPage() {
       <div className="between" style={{ padding: '16px 0' }}>
         <div>
           <h1 className="title">⚙️ Admin</h1>
-          <p className="muted small">Kelola meja, QR, dan menu</p>
+          <p className="muted small">Kelola meja, QR, menu, dan promo</p>
         </div>
         <Link href="/" className="btn">← Beranda</Link>
       </div>
@@ -78,6 +82,7 @@ function AdminPage() {
       <div className="row" style={{ marginBottom: 14 }}>
         <button className={`btn ${tab === 'tables' ? 'btn-brand' : ''}`} onClick={() => setTab('tables')}>Meja &amp; QR</button>
         <button className={`btn ${tab === 'menu' ? 'btn-brand' : ''}`} onClick={() => setTab('menu')}>Menu</button>
+        <button className={`btn ${tab === 'promo' ? 'btn-brand' : ''}`} onClick={() => setTab('promo')}>🎟 Promo</button>
       </div>
 
       {tab === 'tables' && (
@@ -86,12 +91,15 @@ function AdminPage() {
       {tab === 'menu' && (
         <MenuTab items={items} categories={categories} stations={stations} inventory={inventory} reload={load} />
       )}
+      {tab === 'promo' && (
+        <PromoTab promos={promos} categories={categories} reload={load} />
+      )}
     </div>
   );
 }
 
 function MenuTab({ items, categories, stations, inventory, reload }) {
-  const EMPTY = { name: '', price: '', category_id: '', station_id: '', description: '', image_url: '', daily_qty: '' };
+  const EMPTY = { name: '', price: '', category_id: '', station_id: '', description: '', image_url: '', daily_qty: '', discount_percent: '' };
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -119,6 +127,7 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
       description: it.description || '',
       image_url: it.image_url || '',
       daily_qty: it.daily_qty ?? '',
+      discount_percent: it.discount_percent ?? '',
     });
   }
   async function saveEdit(it) {
@@ -133,6 +142,7 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
       station_id: station,
       image_url: editForm.image_url || null,
       daily_qty: editForm.daily_qty === '' ? null : Number(editForm.daily_qty),
+      discount_percent: editForm.discount_percent === '' ? null : Number(editForm.discount_percent),
     }).eq('id', it.id);
     setEditId(null);
     await reload();
@@ -151,6 +161,7 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
       station_id: station,
       image_url: form.image_url || null,
       daily_qty: form.daily_qty === '' ? null : Number(form.daily_qty),
+      discount_percent: form.discount_percent === '' ? null : Number(form.discount_percent),
       available: true,
     });
     setForm(EMPTY);
@@ -166,6 +177,15 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
     await supabase.from('menu_items').delete().eq('id', it.id);
     reload();
   }
+  // Diskon menu bisa diubah langsung dari daftar — admin sering hanya perlu
+  // menyalakan promo satu item untuk besok, tanpa mengedit seluruh menunya.
+  async function setDiskon(it, nilai) {
+    const n = nilai === '' ? null : Math.min(100, Math.max(0, Number(nilai) || 0));
+    if ((n ?? null) === (it.discount_percent ?? null)) return;
+    await supabase.from('menu_items').update({ discount_percent: n || null }).eq('id', it.id);
+    reload();
+  }
+
   async function setStation(it, station_id) {
     await supabase.from('menu_items').update({ station_id: station_id || null }).eq('id', it.id);
     reload();
@@ -190,6 +210,7 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
         <input className="input" style={{ marginTop: 10 }} placeholder="Deskripsi (opsional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <div className="row" style={{ marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input className="input" type="number" style={{ width: 200 }} placeholder="Sisa porsi hari ini (opsional)" value={form.daily_qty} onChange={(e) => setForm({ ...form, daily_qty: e.target.value })} />
+          <input className="input" type="number" style={{ width: 150 }} placeholder="Diskon % (opsional)" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} />
           <label className="btn" style={{ cursor: 'pointer' }}>
             📷 Foto
             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pickImage(e.target.files?.[0], setForm)} />
@@ -224,6 +245,7 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                 <input className="input" placeholder="Deskripsi (opsional)" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
                 <div className="row" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
                   <input className="input" type="number" style={{ width: 200 }} placeholder="Sisa porsi hari ini (opsional)" value={editForm.daily_qty} onChange={(e) => setEditForm({ ...editForm, daily_qty: e.target.value })} />
+                  <input className="input" type="number" style={{ width: 150 }} placeholder="Diskon % (opsional)" value={editForm.discount_percent} onChange={(e) => setEditForm({ ...editForm, discount_percent: e.target.value })} />
                   <label className="btn" style={{ cursor: 'pointer' }}>
                     📷 Foto
                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pickImage(e.target.files?.[0], setEditForm)} />
@@ -250,6 +272,11 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                     <div>
                       <span className="bold">{it.name}</span> · {rupiah(it.price)}
                       {it.daily_qty != null && <span className="badge badge-amber" style={{ marginLeft: 6 }}>sisa {it.daily_qty}</span>}
+                      {Number(it.discount_percent) > 0 && (
+                        <span className="badge badge-green" style={{ marginLeft: 6 }}>
+                          diskon {Number(it.discount_percent)}%
+                        </span>
+                      )}
                       {it.description && <div className="muted small">{it.description}</div>}
                     </div>
                   </div>
@@ -260,6 +287,19 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                     <option value="">Tanpa station</option>
                     {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
+                  <span className="row" style={{ alignItems: 'center', gap: 4 }}>
+                    <span className="muted small">Diskon</span>
+                    <input
+                      className="input"
+                      style={{ width: 70, textAlign: 'center', padding: '6px 8px' }}
+                      inputMode="numeric"
+                      placeholder="—"
+                      defaultValue={it.discount_percent ?? ''}
+                      onBlur={(e) => setDiskon(it, e.target.value)}
+                      title="Diskon khusus menu ini, dalam persen"
+                    />
+                    <span className="muted small">%</span>
+                  </span>
                   <button className="btn btn-brand" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => startEdit(it)}>✏️ Edit</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => setRecipeFor(recipeFor === it.id ? null : it.id)}>🧪 Resep</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => toggle(it)}>{it.available ? 'Set habis' : 'Set tersedia'}</button>

@@ -61,6 +61,8 @@ alter table menu_items add column if not exists needs_cook_method boolean defaul
 alter table menu_items add column if not exists needs_drink_option boolean default false;
 -- true = harus digoreng dulu sebelum dibakar (proses shao kao)
 alter table menu_items add column if not exists needs_fry_first boolean default false;
+-- diskon melekat pada menu, diatur admin (null/0 = tanpa diskon)
+alter table menu_items add column if not exists discount_percent numeric;
 
 -- ---------- ORDER (bill per meja) ----------
 create table if not exists orders (
@@ -121,6 +123,8 @@ alter table order_items add column if not exists cancelled_at  timestamptz;
 alter table order_items add column if not exists cancel_reason text;
 alter table order_items add column if not exists cancelled_by  text;
 create index if not exists idx_orderitems_cancelled on order_items(order_id, cancelled_at);
+alter table order_items add column if not exists discount      numeric default 0;
+alter table order_items add column if not exists discount_note text;
 -- gelombang pemesanan: 1 = pesanan awal, 2+ = tambahan dari meja yang sama.
 -- Struk dapur hanya mencetak gelombang yang bersangkutan supaya masakan
 -- lama tidak dibuat ulang.
@@ -480,4 +484,38 @@ drop policy if exists "allow all kitchen_perf_log" on kitchen_perf_log;
 create policy "allow all kitchen_perf_log" on kitchen_perf_log for all using (true) with check (true);
 
 grant select, insert, update, delete on kitchen_perf_log to anon, authenticated;
+notify pgrst, 'reload schema';
+
+
+-- ============================================================
+--  PROMO / DISKON (kode dipasang kasir sebelum pembayaran)
+-- ============================================================
+create table if not exists promos (
+  id          uuid default gen_random_uuid() primary key,
+  code        text not null,
+  name        text not null,                 -- keterangan untuk staf
+  percent     numeric not null,              -- 0-100
+  -- 'all' | 'categories' | 'except_categories'
+  scope       text not null default 'all',
+  scope_category_ids uuid[] default '{}',
+  valid_from  date,                          -- null = tanpa batas awal
+  valid_until date,                          -- null = sampai dibatalkan manual
+  active      boolean default true,
+  used_count  int default 0,
+  created_at  timestamptz default now()
+);
+-- kode unik tanpa peduli huruf besar/kecil
+create unique index if not exists idx_promos_code on promos (lower(code));
+create index if not exists idx_promos_active on promos (active, valid_until);
+
+-- Diskon yang dipakai disimpan di order supaya nota & laporan lama tetap
+-- benar walau promonya kemudian diubah atau dihapus.
+alter table orders add column if not exists promo_code text;
+alter table orders add column if not exists promo_id   uuid references promos(id);
+alter table orders add column if not exists discount   numeric default 0;
+
+alter table promos enable row level security;
+drop policy if exists "allow all promos" on promos;
+create policy "allow all promos" on promos for all using (true) with check (true);
+grant select, insert, update, delete on promos to anon, authenticated;
 notify pgrst, 'reload schema';

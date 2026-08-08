@@ -83,6 +83,7 @@ function CashierPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
+  const [kodePromo, setKodePromo] = useState({}); // order_id -> kode yang diketik
   const [calls, setCalls] = useState([]);
   const [soundOn, setSoundOn] = useState(false);
   const audioCtxRef = useRef(null);
@@ -174,6 +175,41 @@ function CashierPage() {
     });
     await load();
     setBusy('');
+  }
+
+  async function pasangPromo(o) {
+    const code = (kodePromo[o.id] || '').trim();
+    if (!code) return;
+    setBusy(o.id);
+    try {
+      const r = await fetch(`/api/orders/${o.id}/promo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Kode tidak berlaku');
+      setKodePromo((k) => ({ ...k, [o.id]: '' }));
+      await load();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function lepasPromo(o) {
+    setBusy(o.id);
+    try {
+      const r = await fetch(`/api/orders/${o.id}/promo`, { method: 'DELETE' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Gagal melepas kode');
+      await load();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy('');
+    }
   }
 
   // Batalkan SATU item (mis. bahannya habis) tanpa membatalkan seluruh bill.
@@ -369,7 +405,58 @@ function CashierPage() {
                 ))}
               </div>
               <hr className="hr" />
+              {Number(o.discount) > 0 && (
+                <>
+                  <div className="between small">
+                    <span className="muted">Subtotal</span><span>{rupiah(o.subtotal)}</span>
+                  </div>
+                  <div className="between small" style={{ color: '#16794a' }}>
+                    <span>Diskon{o.promo_code ? ` (${o.promo_code})` : ''}</span>
+                    <span>− {rupiah(o.discount)}</span>
+                  </div>
+                  <div className="between small">
+                    <span className="muted">PB1</span><span>{rupiah(o.tax)}</span>
+                  </div>
+                </>
+              )}
               <div className="between"><span className="bold">Total</span><span className="bold">{rupiah(o.total)}</span></div>
+
+              {/* Kode promo hanya boleh dipasang sebelum lunas — sesudahnya
+                  jumlah yang sudah dibayar tidak lagi cocok dengan total. */}
+              {tab === 'active' && !paid && o.status !== 'cancelled' && (
+                <div className="no-print" style={{ marginTop: 10 }}>
+                  {o.promo_code ? (
+                    <div className="between">
+                      <span className="badge badge-green">🎟 {o.promo_code}</span>
+                      <button
+                        className="btn"
+                        style={{ padding: '4px 10px', fontSize: 13 }}
+                        disabled={busy === o.id}
+                        onClick={() => lepasPromo(o)}
+                      >
+                        Lepas kode
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="row">
+                      <input
+                        className="input"
+                        placeholder="Kode promo / diskon"
+                        value={kodePromo[o.id] || ''}
+                        onChange={(e) => setKodePromo((k) => ({ ...k, [o.id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') pasangPromo(o); }}
+                      />
+                      <button
+                        className="btn btn-brand"
+                        disabled={busy === o.id || !(kodePromo[o.id] || '').trim()}
+                        onClick={() => pasangPromo(o)}
+                      >
+                        Pakai
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {o.status === 'cancelled' && (
                 <div className="small" style={{ marginTop: 8, color: '#ff8585' }}>

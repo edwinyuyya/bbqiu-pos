@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../../../lib/supabaseServer';
 import { sendNotif } from '../../../../../lib/notify';
-import { taxPercent } from '../../../../../lib/tax';
+import { recalcOrder } from '../../../../../lib/recalcOrder';
 
 export const dynamic = 'force-dynamic';
-
-const TAX_PERCENT = taxPercent();
 
 // POST /api/order-items/:id/cancel  { reason, by }
 // Batalkan SATU baris pesanan (mis. bahannya habis) tanpa membatalkan
@@ -83,25 +81,18 @@ export async function POST(req, { params }) {
     }
   }
 
-  // 3) Hitung ulang total dari item yang masih hidup
-  const { data: sisa } = await db
-    .from('order_items')
-    .select('price, qty')
-    .eq('order_id', item.order_id)
-    .is('cancelled_at', null);
-  const subtotal = (sisa || []).reduce((s, l) => s + Number(l.price) * Number(l.qty), 0);
-  const tax = Math.round((subtotal * TAX_PERCENT) / 100);
-  await db
-    .from('orders')
-    .update({ subtotal, tax, total: subtotal + tax })
-    .eq('id', item.order_id);
+  // 3) Hitung ulang total lewat jalur bersama (diskon & promo ikut terjaga)
+  const hasil = await recalcOrder(db, item.order_id);
+  const subtotal = hasil?.subtotal ?? 0;
+  const tax = hasil?.pajak ?? 0;
+  const total = hasil?.total ?? 0;
 
   // Pembatalan menyentuh uang — kabari pemilik seperti halnya void bill.
   sendNotif(
     `✖ *ITEM DIBATALKAN*\nOrder #${order.order_no} · Meja ${order.table_number}\n` +
     `${item.qty}× ${item.name}\nAlasan: ${reason}${by ? `\nOleh: ${by}` : ''}\n` +
-    `Total baru: Rp ${(subtotal + tax).toLocaleString('id-ID')}`
+    `Total baru: Rp ${total.toLocaleString('id-ID')}`
   );
 
-  return NextResponse.json({ ok: true, subtotal, tax, total: subtotal + tax });
+  return NextResponse.json({ ok: true, subtotal, tax, total });
 }

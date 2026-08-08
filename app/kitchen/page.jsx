@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import { variantLabels } from '../../lib/variants';
 import { STATIONS, STATION_GORENG } from '../../lib/stations';
+import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
@@ -84,11 +85,14 @@ function KitchenPage() {
   }
 
   const load = useCallback(async () => {
-    const { data: ords } = await supabase
+    let q = supabase
       .from('orders')
       .select('id, order_no, table_number, status, payment_method, payment_status, created_at, note')
-      .in('status', ['open', 'preparing', 'served'])
-      .order('created_at', { ascending: true });
+      .in('status', ['open', 'preparing', 'served']);
+    // Pesanan belum lunas sengaja tidak ditampilkan sama sekali — bukan
+    // ditampilkan dengan tanda — supaya tidak ada yang terlanjur dimasak.
+    if (WAJIB_BAYAR_DULU) q = q.eq('payment_status', 'paid');
+    const { data: ords } = await q.order('created_at', { ascending: true });
 
     const ids = (ords || []).map((o) => o.id);
     let items = [];
@@ -193,7 +197,10 @@ function KitchenPage() {
       <div className="between" style={{ padding: '16px 0' }}>
         <div>
           <h1 className="title">🍳 Kitchen Display</h1>
-          <p className="muted small">Auto-refresh tiap 5 detik · 1 printer untuk 3 station</p>
+          <p className="muted small">
+            Auto-refresh tiap 5 detik · 1 printer untuk semua station
+            {WAJIB_BAYAR_DULU && ' · hanya pesanan yang sudah lunas'}
+          </p>
         </div>
         <div className="row no-print">
           <button className={`btn ${soundOn ? 'btn-green' : 'btn-brand'}`} onClick={enableSound}>

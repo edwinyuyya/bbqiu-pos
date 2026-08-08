@@ -3,6 +3,8 @@ import PrintControls from './PrintControls';
 import BbqiuLogoMark from '../../../components/BbqiuLogoMark';
 import { variantLabels } from '../../../../lib/variants';
 import { STATIONS as STATION_LIST } from '../../../../lib/stations';
+import { WAJIB_BAYAR_DULU, PESAN_MENUNGGU_BAYAR } from '../../../../lib/orderFlow';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,28 @@ export default async function PrintPage({ params, searchParams }) {
   const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
   if (!order) {
     return <div className="container-sm" style={{ paddingTop: 40 }}><div className="card">Order tidak ditemukan.</div></div>;
+  }
+
+  // Struk station adalah perintah memasak. Kalau bill belum lunas, jangan
+  // dicetak sama sekali — sekali struk keluar, makanan akan terlanjur dibuat.
+  if (WAJIB_BAYAR_DULU && order.payment_status !== 'paid') {
+    return (
+      <div className="container-sm" style={{ paddingTop: 40 }}>
+        <div className="card" style={{ borderColor: 'var(--red)' }}>
+          <div className="h2">Belum bisa dicetak</div>
+          <p style={{ marginTop: 8 }}>
+            Pesanan <b>#{order.order_no}</b> (Meja {order.table_number}) belum lunas.
+          </p>
+          <p className="muted small">{PESAN_MENUNGGU_BAYAR}</p>
+          <p className="muted small">
+            Tandai lunas dulu di halaman Kasir, lalu struk ini bisa dicetak.
+          </p>
+          <Link href="/cashier" className="btn btn-brand btn-block" style={{ marginTop: 10 }}>
+            Buka Kasir
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const { data: jobs } = await db

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
 import TakeOrder from './TakeOrder';
+import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
@@ -329,6 +330,9 @@ function CashierPage() {
                 <span className="badge">{o.payment_method === 'qris' ? 'QRIS' : 'Kasir'}</span>
                 {!paid && o.customer_claimed_paid && (
                   <span className="badge badge-amber">🔔 Klaim bayar — cek app bank</span>
+                )}
+                {!paid && WAJIB_BAYAR_DULU && o.status !== 'cancelled' && (
+                  <span className="badge badge-red">⏸ Dapur menunggu pelunasan</span>
                 )}
                 {o.customer_name && <span className="muted small">{o.customer_name}</span>}
               </div>

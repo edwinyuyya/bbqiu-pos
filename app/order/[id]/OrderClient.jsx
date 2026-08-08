@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import CallWaiterButton from '../../components/CallWaiterButton';
 import { variantLabels } from '../../../lib/variants';
+import { WAJIB_BAYAR_DULU, PESAN_MENUNGGU_BAYAR } from '../../../lib/orderFlow';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -110,6 +111,18 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
           <p className="muted small" style={{ marginTop: 6 }}>
             Tunjukkan nomor pesanan <b>#{order.order_no}</b> di kasir untuk
             menyelesaikan pembayaran sejumlah <b>{rupiah(order.total)}</b>.
+          </p>
+        </div>
+      )}
+
+      {/* Alasan pesanan belum jalan — supaya pelanggan tidak menunggu
+          makanan yang memang belum diteruskan ke dapur. */}
+      {!paid && WAJIB_BAYAR_DULU && (
+        <div className="card" style={{ marginTop: 12, borderColor: 'var(--brand2)' }}>
+          <div className="bold">⏳ Menunggu pembayaran</div>
+          <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
+            {PESAN_MENUNGGU_BAYAR} Dapur belum mulai memasak sampai pembayaranmu
+            diterima. Halaman ini diperbarui otomatis.
           </p>
         </div>
       )}

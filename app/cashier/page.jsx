@@ -175,6 +175,35 @@ function CashierPage() {
     setBusy('');
   }
 
+  // Batalkan SATU item (mis. bahannya habis) tanpa membatalkan seluruh bill.
+  // Cukup alasan + nama petugas, tanpa foto — bobotnya jauh lebih kecil
+  // daripada void bill, tapi tetap dicatat & dikabarkan ke pemilik.
+  async function batalkanItem(o, it) {
+    const reason = prompt(
+      `Batalkan item:\n${it.qty}× ${it.name} (${rupiah(it.price * it.qty)})\n\n` +
+      `Alasan (mis. bahan habis):`
+    );
+    if (reason === null) return;
+    if (!reason.trim()) { alert('Alasan wajib diisi.'); return; }
+    const by = prompt('Nama/inisial petugas:') || '';
+
+    setBusy(o.id);
+    try {
+      const r = await fetch(`/api/order-items/${it.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim(), by: by.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Gagal membatalkan item');
+      await load();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy('');
+    }
+  }
+
   // Void/batalkan bill: wajib isi alasan + nama petugas + FOTO WAJAH (anti-curang)
   async function voidBill(o) {
     const reason = prompt(`Batalkan bill #${o.order_no} (Meja ${o.table_number}, ${rupiah(o.total)}).\n\nAlasan pembatalan:`);
@@ -308,8 +337,30 @@ function CashierPage() {
               <div className="col" style={{ gap: 4 }}>
                 {(items[o.id] || []).map((it) => (
                   <div key={it.id} className="between small">
-                    <span>{it.qty}× {it.name}</span>
-                    <span>{rupiah(it.price * it.qty)}</span>
+                    <span style={it.cancelled_at ? { textDecoration: 'line-through', opacity: 0.55 } : null}>
+                      {it.qty}× {it.name}
+                      {it.cancelled_at && (
+                        <span className="badge badge-red" style={{ marginLeft: 6, fontSize: 10 }}>
+                          batal{it.cancel_reason ? `: ${it.cancel_reason}` : ''}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={it.cancelled_at ? { textDecoration: 'line-through', opacity: 0.55 } : null}>
+                        {rupiah(it.price * it.qty)}
+                      </span>
+                      {tab === 'active' && !it.cancelled_at && o.status !== 'cancelled' && (
+                        <button
+                          className="btn no-print"
+                          style={{ padding: '2px 8px', fontSize: 12 }}
+                          disabled={busy === o.id}
+                          onClick={() => batalkanItem(o, it)}
+                          title="Batalkan item ini saja"
+                        >
+                          ✖
+                        </button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>

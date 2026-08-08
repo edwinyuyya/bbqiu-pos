@@ -98,6 +98,7 @@ function KitchenPage() {
         .from('order_items')
         .select('*')
         .in('order_id', ids)
+        .is('cancelled_at', null)
         .neq('kitchen_status', 'served');
       items = r1.data || [];
       const r2 = await supabase

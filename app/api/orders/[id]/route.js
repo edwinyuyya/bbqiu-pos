@@ -21,6 +21,7 @@ export async function GET(_req, { params }) {
     .from('order_items')
     .select('*')
     .eq('order_id', id)
+    .is('cancelled_at', null)
     .order('created_at', { ascending: true });
 
   return NextResponse.json({ order, items: items || [] });

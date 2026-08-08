@@ -21,7 +21,10 @@ export default async function NotaPage({ params }) {
     return <div className="container-sm" style={{ paddingTop: 40 }}><div className="card">Order tidak ditemukan.</div></div>;
   }
   const { data: items } = await db
-    .from('order_items').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
+    .from('order_items').select('*').eq('order_id', orderId)
+    // item yang dibatalkan tidak ikut ditagihkan ke pelanggan
+    .is('cancelled_at', null)
+    .order('created_at', { ascending: true });
 
   const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'BBQIU';
   const paid = order.payment_status === 'paid';

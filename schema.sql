@@ -116,6 +116,11 @@ alter table order_items add column if not exists drink_temp text;   -- 'es' | 'p
 alter table order_items add column if not exists sweetness  text;   -- 'mondo' | 'manis' | 'tawar'
 -- tahap proses yang sedang berjalan: 'goreng' -> 'bakar' (null = satu tahap)
 alter table order_items add column if not exists stage text;
+-- pembatalan PER ITEM (mis. bahan habis), terpisah dari void seluruh bill
+alter table order_items add column if not exists cancelled_at  timestamptz;
+alter table order_items add column if not exists cancel_reason text;
+alter table order_items add column if not exists cancelled_by  text;
+create index if not exists idx_orderitems_cancelled on order_items(order_id, cancelled_at);
 
 -- ---------- ANTRIAN CETAK DAPUR ----------
 create table if not exists print_jobs (

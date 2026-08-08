@@ -27,6 +27,7 @@ export default async function PrintPage({ params }) {
     .from('order_items')
     .select('*')
     .eq('order_id', orderId)
+    .is('cancelled_at', null)   // item batal tidak perlu dimasak
     .order('created_at', { ascending: true });
 
   const { data: jobs } = await db

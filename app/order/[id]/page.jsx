@@ -25,6 +25,7 @@ export default async function OrderPage({ params }) {
     .from('order_items')
     .select('*')
     .eq('order_id', id)
+    .is('cancelled_at', null)
     .order('created_at', { ascending: true });
 
   // Generate QRIS untuk pembayaran. Jika ada payload statis merchant,

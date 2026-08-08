@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../lib/supabaseServer';
 import { taxPercent } from '../../../lib/tax';
 import { COOK_METHOD_IDS, DRINK_TEMP_IDS, SWEETNESS_IDS } from '../../../lib/variants';
+import { STATION_GORENG } from '../../../lib/stations';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,7 @@ export async function POST(req) {
   const ids = [...new Set(items.map((i) => i.menu_item_id))];
   const { data: menu, error: mErr } = await db
     .from('menu_items')
-    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, needs_drink_option, categories(station_id)')
+    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, needs_drink_option, needs_fry_first, categories(station_id)')
     .in('id', ids);
   if (mErr)
     return NextResponse.json({ error: 'Gagal membaca menu' }, { status: 500 });
@@ -69,7 +70,12 @@ export async function POST(req) {
         { status: 400 }
       );
     const qty = Math.max(1, parseInt(it.qty, 10) || 1);
-    const station = m.station_id || m.categories?.station_id || null;
+    // Menu shao kao digoreng dulu, baru dibakar. Baris pesanannya masuk ke
+    // station Goreng lebih dulu; setelah ditandai selesai di sana, barulah
+    // pindah sendiri ke station Bakaran.
+    const stationAkhir = m.station_id || m.categories?.station_id || null;
+    const duaTahap = !!m.needs_fry_first;
+    const station = duaTahap ? STATION_GORENG : stationAkhir;
     const cookMethod = COOK_METHOD_IDS.includes(it.cook_method) ? it.cook_method : null;
     if (m.needs_cook_method && !cookMethod)
       return NextResponse.json(
@@ -94,6 +100,7 @@ export async function POST(req) {
       cook_method: cookMethod,
       drink_temp: drinkTemp,
       sweetness,
+      stage: duaTahap ? 'goreng' : null,
     });
   }
 

@@ -2,14 +2,11 @@ import { supabaseServer } from '../../../../lib/supabaseServer';
 import PrintControls from './PrintControls';
 import BbqiuLogoMark from '../../../components/BbqiuLogoMark';
 import { variantLabels } from '../../../../lib/variants';
+import { STATIONS as STATION_LIST } from '../../../../lib/stations';
 
 export const dynamic = 'force-dynamic';
 
-const STATIONS = [
-  { id: 'shaokao', name: 'STATION SHAOKAO' },
-  { id: 'maincourse', name: 'STATION MAINCOURSE' },
-  { id: 'bar', name: 'BAR MINUMAN' },
-];
+const STATIONS = STATION_LIST.map((s) => ({ id: s.id, name: s.cetak }));
 
 function fmtTime(ts) {
   return new Date(ts).toLocaleString('id-ID', {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../../lib/supabaseServer';
+import { STATION_IDS } from '../../../../lib/stations';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export async function GET(req) {
 
   // item terjual (per station + terlaris) + HPP (fluktuatif, harga beli terkini)
   const ids = live.map((o) => o.id);
-  let perStation = { shaokao: 0, maincourse: 0, bar: 0 };
+  let perStation = Object.fromEntries(STATION_IDS.map((id) => [id, 0]));
   let topItems = [];
   let hppTotal = 0;
   if (ids.length) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import PinGate from '../components/PinGate';
 import AlertsPanel from '../components/AlertsPanel';
+import { STATIONS } from '../../lib/stations';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 function durasi(sec) {
@@ -21,12 +22,6 @@ function jamWIB(iso) {
     });
   } catch { return ''; }
 }
-
-const STATIONS = [
-  { id: 'shaokao', name: 'Shaokao' },
-  { id: 'maincourse', name: 'Maincourse' },
-  { id: 'bar', name: 'Bar' },
-];
 
 function OwnerInner() {
   const [data, setData] = useState(null);

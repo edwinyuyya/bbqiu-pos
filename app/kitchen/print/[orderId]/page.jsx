@@ -14,7 +14,7 @@ function fmtTime(ts) {
   });
 }
 
-export default async function PrintPage({ params }) {
+export default async function PrintPage({ params, searchParams }) {
   const { orderId } = await params;
   const db = supabaseServer();
 
@@ -23,21 +23,31 @@ export default async function PrintPage({ params }) {
     return <div className="container-sm" style={{ paddingTop: 40 }}><div className="card">Order tidak ditemukan.</div></div>;
   }
 
-  const { data: items } = await db
-    .from('order_items')
-    .select('*')
-    .eq('order_id', orderId)
-    .is('cancelled_at', null)   // item batal tidak perlu dimasak
-    .order('created_at', { ascending: true });
-
   const { data: jobs } = await db
     .from('print_jobs')
-    .select('id')
+    .select('id, batch_no')
     .eq('order_id', orderId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(1);
   const jobId = jobs?.[0]?.id || null;
+
+  // Pesanan tambahan dari meja yang sama menempel ke bill ini sebagai
+  // gelombang (batch) berikutnya. Struk hanya memuat gelombang yang belum
+  // dicetak — kalau semua item ikut tercetak lagi, dapur akan memasak ulang
+  // pesanan yang tadi sudah jadi.
+  // ?semua=1 memaksa cetak seluruh isi bill (untuk cetak ulang manual).
+  const { semua } = await searchParams;
+  const cetakSemua = semua === '1' || jobs?.[0]?.batch_no == null;
+  const batchCetak = jobs?.[0]?.batch_no ?? null;
+
+  let q = db
+    .from('order_items')
+    .select('*')
+    .eq('order_id', orderId)
+    .is('cancelled_at', null);   // item batal tidak perlu dimasak
+  if (!cetakSemua) q = q.eq('batch_no', batchCetak);
+  const { data: items } = await q.order('created_at', { ascending: true });
 
   // Kelompokkan item per station (routing cetak)
   const grouped = STATIONS.map((s) => ({
@@ -56,6 +66,12 @@ export default async function PrintPage({ params }) {
       <p className="muted small no-print" style={{ marginTop: 8 }}>
         Satu dokumen ini berisi {activeStations.length} struk station — printer akan
         mencetak berurutan dengan pemisah potong di antaranya.
+        {!cetakSemua && (
+          <>
+            {' '}Yang dicetak hanya <b>pesanan tambahan ke-{batchCetak}</b>.{' '}
+            <a href={`/kitchen/print/${orderId}?semua=1`}>Cetak seluruh isi bill</a>
+          </>
+        )}
       </p>
 
       {activeStations.map((s, idx) => (
@@ -66,6 +82,11 @@ export default async function PrintPage({ params }) {
             <div className="line" />
             <div className="item"><span>Order</span><span>#{order.order_no}</span></div>
             <div className="item"><span>Meja</span><span>{order.table_number}</span></div>
+            {!cetakSemua && batchCetak > 1 && (
+              <div className="item">
+                <span><b>PESANAN TAMBAHAN</b></span><span><b>ke-{batchCetak}</b></span>
+              </div>
+            )}
             <div className="item"><span>Waktu</span><span>{fmtTime(order.created_at)}</span></div>
             <div className="item">
               <span>Bayar</span>

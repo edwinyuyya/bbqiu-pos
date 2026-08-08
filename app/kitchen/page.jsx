@@ -277,6 +277,11 @@ function KitchenPage() {
                               sudah digoreng
                             </span>
                           )}
+                          {it.batch_no > 1 && (
+                            <span className="badge badge-red" style={{ fontSize: 10, marginLeft: 4 }}>
+                              tambahan ke-{it.batch_no}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="col no-print" style={{ gap: 4 }}>

@@ -122,42 +122,103 @@ export async function POST(req) {
     neededByInv[inv.id].need += need;
   }
 
-  // 3) Hitung total
-  const subtotal = lineItems.reduce((s, l) => s + l.price * l.qty, 0);
-  const tax = Math.round((subtotal * TAX_PERCENT) / 100);
-  const total = subtotal + tax;
-
-  // 4) Insert order
-  const { data: order, error: oErr } = await db
+  // 3) Kalau meja ini masih punya bill berjalan yang BELUM dibayar, pesanan
+  // baru menempel ke bill itu sebagai tambahan — bukan bikin bill sendiri.
+  // Bill yang sudah lunas sengaja tidak diutak-atik: menambah item ke sana
+  // akan membuat jumlah yang sudah dibayar tidak lagi cocok dengan totalnya.
+  const { data: billBerjalan } = await db
     .from('orders')
-    .insert({
-      table_id: table.id,
-      table_number: table.table_number,
-      status: 'open',
-      payment_method,
-      payment_status: 'unpaid',
-      subtotal,
-      tax,
-      total,
-      customer_name: (customer_name || '').toString().slice(0, 80) || null,
-      note: (note || '').toString().slice(0, 300) || null,
-    })
-    .select()
-    .single();
-  if (oErr)
-    return NextResponse.json({ error: 'Gagal membuat order' }, { status: 500 });
+    .select('*')
+    .eq('table_id', table.id)
+    .in('status', ['open', 'preparing', 'served'])
+    .neq('payment_status', 'paid')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  // 5) Insert item
-  const { error: iErr } = await db
-    .from('order_items')
-    .insert(lineItems.map((l) => ({ ...l, order_id: order.id })));
-  if (iErr) {
-    await db.from('orders').delete().eq('id', order.id);
-    return NextResponse.json({ error: 'Gagal menyimpan item' }, { status: 500 });
+  const tambahanSubtotal = lineItems.reduce((s, l) => s + l.price * l.qty, 0);
+  let order;
+  let batchNo = 1;
+
+  if (billBerjalan) {
+    // Gelombang berikutnya untuk bill yang sama.
+    const { data: batchTerakhir } = await db
+      .from('order_items')
+      .select('batch_no')
+      .eq('order_id', billBerjalan.id)
+      .order('batch_no', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    batchNo = Number(batchTerakhir?.batch_no || 1) + 1;
+
+    const { error: iErr } = await db
+      .from('order_items')
+      .insert(lineItems.map((l) => ({ ...l, order_id: billBerjalan.id, batch_no: batchNo })));
+    if (iErr)
+      return NextResponse.json({ error: 'Gagal menyimpan item tambahan' }, { status: 500 });
+
+    // Total dihitung ulang dari SELURUH item hidup, bukan ditambahkan ke
+    // total lama — supaya tetap benar walau ada item yang dibatalkan.
+    const { data: semua } = await db
+      .from('order_items')
+      .select('price, qty')
+      .eq('order_id', billBerjalan.id)
+      .is('cancelled_at', null);
+    const subtotalBaru = (semua || []).reduce((s, l) => s + Number(l.price) * Number(l.qty), 0);
+    const taxBaru = Math.round((subtotalBaru * TAX_PERCENT) / 100);
+
+    const patch = {
+      subtotal: subtotalBaru,
+      tax: taxBaru,
+      total: subtotalBaru + taxBaru,
+      payment_method, // pelanggan boleh ganti cara bayar untuk total barunya
+      status: billBerjalan.status === 'served' ? 'open' : billBerjalan.status,
+    };
+    if (!billBerjalan.customer_name && customer_name)
+      patch.customer_name = customer_name.toString().slice(0, 80);
+    if (note) {
+      const lama = billBerjalan.note ? `${billBerjalan.note}\n` : '';
+      patch.note = `${lama}[Tambahan ${batchNo}] ${note}`.slice(0, 300);
+    }
+
+    const { data: updated, error: uErr } = await db
+      .from('orders').update(patch).eq('id', billBerjalan.id).select().single();
+    if (uErr) return NextResponse.json({ error: 'Gagal memperbarui bill' }, { status: 500 });
+    order = updated;
+  } else {
+    const tax = Math.round((tambahanSubtotal * TAX_PERCENT) / 100);
+    const { data: baru, error: oErr } = await db
+      .from('orders')
+      .insert({
+        table_id: table.id,
+        table_number: table.table_number,
+        status: 'open',
+        payment_method,
+        payment_status: 'unpaid',
+        subtotal: tambahanSubtotal,
+        tax,
+        total: tambahanSubtotal + tax,
+        customer_name: (customer_name || '').toString().slice(0, 80) || null,
+        note: (note || '').toString().slice(0, 300) || null,
+      })
+      .select()
+      .single();
+    if (oErr)
+      return NextResponse.json({ error: 'Gagal membuat order' }, { status: 500 });
+
+    const { error: iErr } = await db
+      .from('order_items')
+      .insert(lineItems.map((l) => ({ ...l, order_id: baru.id, batch_no: 1 })));
+    if (iErr) {
+      await db.from('orders').delete().eq('id', baru.id);
+      return NextResponse.json({ error: 'Gagal menyimpan item' }, { status: 500 });
+    }
+    order = baru;
   }
 
-  // 6) Buat antrian cetak untuk dapur
-  await db.from('print_jobs').insert({ order_id: order.id, status: 'pending' });
+  // Antrian cetak dapur dicatat per gelombang, supaya struk tambahan hanya
+  // memuat pesanan barunya saja.
+  await db.from('print_jobs').insert({ order_id: order.id, status: 'pending', batch_no: batchNo });
 
   // 7) Kurangi sisa porsi (menu berporsi terbatas). Auto-tutup saat 0.
   for (const m of menu || []) {

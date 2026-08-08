@@ -121,6 +121,11 @@ alter table order_items add column if not exists cancelled_at  timestamptz;
 alter table order_items add column if not exists cancel_reason text;
 alter table order_items add column if not exists cancelled_by  text;
 create index if not exists idx_orderitems_cancelled on order_items(order_id, cancelled_at);
+-- gelombang pemesanan: 1 = pesanan awal, 2+ = tambahan dari meja yang sama.
+-- Struk dapur hanya mencetak gelombang yang bersangkutan supaya masakan
+-- lama tidak dibuat ulang.
+alter table order_items add column if not exists batch_no int default 1;
+alter table print_jobs  add column if not exists batch_no int;
 
 -- ---------- ANTRIAN CETAK DAPUR ----------
 create table if not exists print_jobs (

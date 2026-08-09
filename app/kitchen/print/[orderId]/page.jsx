@@ -27,7 +27,7 @@ export default async function PrintPage({ params, searchParams }) {
 
   // Struk station adalah perintah memasak. Kalau bill belum lunas, jangan
   // dicetak sama sekali — sekali struk keluar, makanan akan terlanjur dibuat.
-  if (WAJIB_BAYAR_DULU && order.payment_status !== 'paid') {
+  if (WAJIB_BAYAR_DULU && order.payment_status !== 'paid' && !order.kitchen_released) {
     return (
       <div className="container-sm" style={{ paddingTop: 40 }}>
         <div className="card" style={{ borderColor: 'var(--red)' }}>
@@ -114,7 +114,13 @@ export default async function PrintPage({ params, searchParams }) {
             <div className="item"><span>Waktu</span><span>{fmtTime(order.created_at)}</span></div>
             <div className="item">
               <span>Bayar</span>
-              <span>{order.payment_status === 'paid' ? 'LUNAS' : (order.payment_method === 'qris' ? 'QRIS' : 'KASIR')}</span>
+              <span>
+                {order.payment_status === 'paid'
+                  ? 'LUNAS'
+                  : order.kitchen_released
+                    ? 'DP (RESERVASI)'
+                    : (order.payment_method === 'qris' ? 'QRIS' : 'KASIR')}
+              </span>
             </div>
             <div className="line" />
             {s.items.map((it) => (

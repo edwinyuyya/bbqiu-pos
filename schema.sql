@@ -556,6 +556,12 @@ create index if not exists idx_reservations_date on reservations(reserved_date, 
 alter table orders add column if not exists reservation_id uuid references reservations(id);
 -- pembayaran bertahap: DP dulu, sisanya saat datang
 alter table orders add column if not exists paid_amount numeric default 0;
+-- Izin khusus supaya dapur boleh mengerjakan bill yang BELUM lunas
+-- (dipakai reservasi ber-DP: tamunya sudah bayar muka dan sudah duduk).
+-- Sengaja kolom terpisah, BUKAN menandai payment_status='paid' -- menandai
+-- lunas padahal uangnya belum penuh akan merusak laporan penjualan dan
+-- membuat sisa tagihan hilang dari kasir.
+alter table orders add column if not exists kitchen_released boolean default false;
 create index if not exists idx_orders_reservation on orders(reservation_id);
 
 alter table reservations enable row level security;

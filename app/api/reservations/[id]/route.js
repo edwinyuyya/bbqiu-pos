@@ -71,9 +71,12 @@ export async function PATCH(req, { params }) {
           table_id: meja.id,
           table_number: meja.table_number,
           paid_amount: dp,
-          // Dapur baru melihat pesanan setelah lunas — DP saja belum cukup.
           payment_status: lunas ? 'paid' : 'unpaid',
           paid_at: lunas ? sekarang : null,
+          // Sudah ada DP dan tamunya sudah duduk -> dapur boleh langsung
+          // mengerjakan tanpa menunggu pelunasan. Sisa tagihan tetap tercatat
+          // di kasir karena payment_status TIDAK dipalsukan jadi lunas.
+          kitchen_released: dp > 0,
         })
         .eq('id', praPesan.id);
       await db.from('print_jobs').insert({ order_id: praPesan.id, status: 'pending', batch_no: 1 });

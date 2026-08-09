@@ -367,8 +367,13 @@ function CashierPage() {
                 {!paid && o.customer_claimed_paid && (
                   <span className="badge badge-amber">🔔 Klaim bayar — cek app bank</span>
                 )}
-                {!paid && WAJIB_BAYAR_DULU && o.status !== 'cancelled' && (
+                {!paid && WAJIB_BAYAR_DULU && o.status !== 'cancelled' && !o.kitchen_released && (
                   <span className="badge badge-red">⏸ Dapur menunggu pelunasan</span>
+                )}
+                {!paid && o.kitchen_released && o.status !== 'cancelled' && (
+                  <span className="badge badge-amber">
+                    📅 Reservasi ber-DP · dapur jalan, sisa {rupiah(Math.max(0, Number(o.total) - Number(o.paid_amount || 0)))}
+                  </span>
                 )}
                 {o.customer_name && <span className="muted small">{o.customer_name}</span>}
               </div>

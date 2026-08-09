@@ -87,11 +87,13 @@ function KitchenPage() {
   const load = useCallback(async () => {
     let q = supabase
       .from('orders')
-      .select('id, order_no, table_number, status, payment_method, payment_status, created_at, note')
+      .select('id, order_no, table_number, status, payment_method, payment_status, created_at, note, kitchen_released, reservation_id')
       .in('status', ['open', 'preparing', 'served']);
     // Pesanan belum lunas sengaja tidak ditampilkan sama sekali — bukan
     // ditampilkan dengan tanda — supaya tidak ada yang terlanjur dimasak.
-    if (WAJIB_BAYAR_DULU) q = q.eq('payment_status', 'paid');
+    // Kecuali reservasi ber-DP: tamunya sudah bayar muka dan sudah duduk,
+    // jadi diberi izin khusus lewat kitchen_released.
+    if (WAJIB_BAYAR_DULU) q = q.or('payment_status.eq.paid,kitchen_released.eq.true');
     const { data: ords } = await q.order('created_at', { ascending: true });
 
     const ids = (ords || []).map((o) => o.id);
@@ -257,6 +259,9 @@ function KitchenPage() {
                   {o.payment_status === 'paid' ? 'Lunas' : o.payment_method === 'qris' ? 'Nunggu QRIS' : 'Bayar kasir'}
                 </span>
                 {pendingPrints[o.id] && <span className="badge badge-red">Belum dicetak</span>}
+                {o.kitchen_released && o.payment_status !== 'paid' && (
+                  <span className="badge badge-amber">📅 Reservasi · DP</span>
+                )}
               </div>
               {o.note && <p className="muted small" style={{ marginTop: 6 }}>Catatan: {o.note}</p>}
 

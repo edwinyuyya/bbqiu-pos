@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import { variantLabels } from '../../lib/variants';
-import { STATIONS } from '../../lib/stations';
+import { STATIONS, perKelompokDapur } from '../../lib/stations';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -37,21 +37,6 @@ function speak(text) {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch {}
-}
-
-// Kelompokkan item satu station per kategori menu, urut sesuai kemunculan.
-// Di station Maincourse bisa bercampur Grill & Steamboat, Nasi & Snack, dan
-// Kuah sekaligus — tanpa dikelompokkan, juru masak harus membaca satu per
-// satu untuk tahu mana yang bagian mereka.
-function perKategori(items) {
-  const urut = [];
-  const byKat = new Map();
-  for (const it of items) {
-    const kat = it.category_name || 'Lainnya';
-    if (!byKat.has(kat)) { byKat.set(kat, []); urut.push(kat); }
-    byKat.get(kat).push(it);
-  }
-  return urut.map((kat) => ({ kat, items: byKat.get(kat) }));
 }
 
 // Format durasi berjalan jadi "Xm Ys" (atau "Hj Xm" kalau lewat 1 jam).
@@ -275,7 +260,7 @@ function KitchenPage() {
               {byStation.map((s) => (
                 <div key={s.id} className={`card ${s.cls}`} style={{ marginBottom: 8, padding: 10 }}>
                   <div className="bold small" style={{ marginBottom: 6 }}>{s.name}</div>
-                  {perKategori(s.items).map((g) => (
+                  {perKelompokDapur(s.items).map((g) => (
                   <div key={g.kat} style={{ marginBottom: 8 }}>
                     <div
                       className="small"

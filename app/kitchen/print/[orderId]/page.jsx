@@ -2,26 +2,13 @@ import { supabaseServer } from '../../../../lib/supabaseServer';
 import PrintControls from './PrintControls';
 import BbqiuLogoMark from '../../../components/BbqiuLogoMark';
 import { variantLabels } from '../../../../lib/variants';
-import { STATIONS as STATION_LIST } from '../../../../lib/stations';
+import { STATIONS as STATION_LIST, perKelompokDapur } from '../../../../lib/stations';
 import { WAJIB_BAYAR_DULU, PESAN_MENUNGGU_BAYAR } from '../../../../lib/orderFlow';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
 const STATIONS = STATION_LIST.map((s) => ({ id: s.id, name: s.cetak }));
-
-// Kelompokkan per kategori supaya struk terbaca sekali lihat: bagian mana
-// shao kao, mana grill/steamboat, mana snack.
-function perKategori(items) {
-  const urut = [];
-  const byKat = new Map();
-  for (const it of items) {
-    const kat = it.category_name || 'Lainnya';
-    if (!byKat.has(kat)) { byKat.set(kat, []); urut.push(kat); }
-    byKat.get(kat).push(it);
-  }
-  return urut.map((kat) => ({ kat, items: byKat.get(kat) }));
-}
 
 function fmtTime(ts) {
   return new Date(ts).toLocaleString('id-ID', {
@@ -136,7 +123,7 @@ export default async function PrintPage({ params, searchParams }) {
               </span>
             </div>
             <div className="line" />
-            {perKategori(s.items).map((g) => (
+            {perKelompokDapur(s.items).map((g) => (
               <div key={g.kat} style={{ marginBottom: 6 }}>
                 <div style={{ fontWeight: 700, textTransform: 'uppercase' }}>» {g.kat}</div>
                 {g.items.map((it) => (

@@ -28,24 +28,39 @@ export default function MenuClient({ token, table, categories, items, taxPercent
   const [payment, setPayment] = useState('qris');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [cari, setCari] = useState('');
 
   const itemById = useMemo(
     () => Object.fromEntries(items.map((i) => [i.id, i])),
     [items]
   );
 
+  // Pencarian menu. Daftar menu sudah 121 item — menggulir sampai ketemu
+  // terlalu lama, apalagi di HP.
+  const hasilCari = useMemo(() => {
+    const q = cari.trim().toLowerCase();
+    if (!q) return items;
+    // Ikut mencari di deskripsi, supaya "pedas" atau "jumbo" tetap ketemu
+    // walau tidak ada di nama menunya.
+    return items.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        (i.description || '').toLowerCase().includes(q)
+    );
+  }, [items, cari]);
+
   const grouped = useMemo(() => {
     const byCat = categories.map((c) => ({
       ...c,
-      items: items.filter((i) => i.category_id === c.id),
+      items: hasilCari.filter((i) => i.category_id === c.id),
     }));
-    const uncategorized = items.filter(
+    const uncategorized = hasilCari.filter(
       (i) => !categories.some((c) => c.id === i.category_id)
     );
     if (uncategorized.length)
       byCat.push({ id: 'none', name: 'Lainnya', items: uncategorized });
     return byCat.filter((c) => c.items.length);
-  }, [categories, items]);
+  }, [categories, hasilCari]);
 
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
@@ -124,6 +139,43 @@ export default function MenuClient({ token, table, categories, items, taxPercent
         <div className="muted small">{merchant}</div>
         <h1 className="title">Menu · Meja {table.table_number}</h1>
       </header>
+
+      {/* Pencarian menempel di atas supaya tetap terjangkau sambil menggulir */}
+      <div
+        style={{
+          position: 'sticky', top: 0, zIndex: 10,
+          background: 'var(--bg)', paddingTop: 4, paddingBottom: 10,
+        }}
+      >
+        <input
+          className="input"
+          type="search"
+          placeholder="Cari menu… (mis. karubi, teh, sate)"
+          value={cari}
+          onChange={(e) => setCari(e.target.value)}
+        />
+        {cari.trim() && (
+          <div className="between" style={{ marginTop: 6 }}>
+            <span className="muted small">{hasilCari.length} menu ditemukan</span>
+            <button
+              className="btn"
+              style={{ padding: '4px 10px', fontSize: 13 }}
+              onClick={() => setCari('')}
+            >
+              Tampilkan semua
+            </button>
+          </div>
+        )}
+      </div>
+
+      {cari.trim() && grouped.length === 0 && (
+        <div className="card">
+          <p className="muted" style={{ margin: 0 }}>
+            Tidak ada menu yang cocok dengan “{cari}”. Coba kata lain, atau tekan
+            “Tampilkan semua”.
+          </p>
+        </div>
+      )}
 
       {grouped.map((cat) => (
         <section key={cat.id} style={{ marginBottom: 18 }}>

@@ -186,6 +186,15 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
     reload();
   }
 
+  // Sebagian menu shao kao digoreng dulu sebelum dibakar, sebagian langsung
+  // dibakar (sayur & jamur). Bisa diubah sendiri karena penggolongannya
+  // urusan dapur, bukan urusan kode.
+  async function toggleGoreng(it) {
+    await supabase.from('menu_items')
+      .update({ needs_fry_first: !it.needs_fry_first }).eq('id', it.id);
+    reload();
+  }
+
   async function setStation(it, station_id) {
     await supabase.from('menu_items').update({ station_id: station_id || null }).eq('id', it.id);
     reload();
@@ -277,6 +286,11 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                           diskon {Number(it.discount_percent)}%
                         </span>
                       )}
+                      {it.needs_fry_first && (
+                        <span className="badge badge-amber" style={{ marginLeft: 6 }}>
+                          🍳 goreng dulu
+                        </span>
+                      )}
                       {it.description && <div className="muted small">{it.description}</div>}
                     </div>
                   </div>
@@ -302,6 +316,16 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                   </span>
                   <button className="btn btn-brand" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => startEdit(it)}>✏️ Edit</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => setRecipeFor(recipeFor === it.id ? null : it.id)}>🧪 Resep</button>
+                  {(it.station_id === 'shaokao' || catById[it.category_id]?.station_id === 'shaokao') && (
+                    <button
+                      className="btn"
+                      style={{ padding: '6px 10px', fontSize: 13 }}
+                      onClick={() => toggleGoreng(it)}
+                      title="Apakah menu ini digoreng dulu sebelum dibakar?"
+                    >
+                      {it.needs_fry_first ? '🍳 Goreng dulu: YA' : '🍳 Goreng dulu: TIDAK'}
+                    </button>
+                  )}
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => toggle(it)}>{it.available ? 'Set habis' : 'Set tersedia'}</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => del(it)}>Hapus</button>
                 </div>

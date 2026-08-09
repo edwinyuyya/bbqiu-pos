@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import { variantLabels } from '../../lib/variants';
-import { STATIONS, STATION_GORENG } from '../../lib/stations';
+import { STATIONS } from '../../lib/stations';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -168,16 +168,6 @@ function KitchenPage() {
     load();
   }
 
-  // Selesai digoreng -> baris pesanan pindah sendiri ke station Bakaran.
-  async function selesaiGoreng(itemId) {
-    await fetch(`/api/order-items/${itemId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ advance_stage: true }),
-    });
-    load();
-  }
-
   // Tandai seluruh order selesai sekaligus + catat durasi (masuk -> selesai)
   // ke log kinerja dapur untuk penilaian nanti.
   async function completeOrder(orderId) {
@@ -284,9 +274,9 @@ function KitchenPage() {
                           <span className={`badge ${it.kitchen_status === 'ready' ? 'badge-green' : 'badge-blue'}`} style={{ fontSize: 10 }}>
                             {it.kitchen_status}
                           </span>
-                          {it.stage === 'bakar' && (
+                          {it.fry_first && (
                             <span className="badge badge-amber" style={{ fontSize: 10, marginLeft: 4 }}>
-                              sudah digoreng
+                              🍳 goreng dulu
                             </span>
                           )}
                           {it.batch_no > 1 && (
@@ -297,18 +287,7 @@ function KitchenPage() {
                         </div>
                       </div>
                       <div className="col no-print" style={{ gap: 4 }}>
-                        {/* Di station Goreng, tombolnya bukan "Ready" tapi
-                            "Selesai Goreng" — itemnya belum jadi, baru
-                            pindah ke tahap bakaran. */}
-                        {s.id === STATION_GORENG && it.stage === 'goreng' ? (
-                          <button
-                            className="btn btn-brand"
-                            style={{ padding: '4px 8px', fontSize: 12 }}
-                            onClick={() => selesaiGoreng(it.id)}
-                          >
-                            🍳 Selesai Goreng →
-                          </button>
-                        ) : it.kitchen_status !== 'ready' ? (
+                        {it.kitchen_status !== 'ready' ? (
                           <button className="btn" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setItemStatus(it.id, 'ready')}>Ready</button>
                         ) : (
                           <button className="btn btn-green" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setItemStatus(it.id, 'served')}>Served</button>

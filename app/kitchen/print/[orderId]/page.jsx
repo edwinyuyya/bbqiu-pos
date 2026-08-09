@@ -131,6 +131,7 @@ export default async function PrintPage({ params, searchParams }) {
                     {variantLabels(it, { emoji: false }).map((lab) => (
                       <b key={lab}> [{lab.toUpperCase()}]</b>
                     ))}
+                    {it.fry_first && <b> [GORENG DULU]</b>}
                   </span>
                 </div>
                 {it.note && <div style={{ fontStyle: 'italic', paddingLeft: 8 }}>* {it.note}</div>}

@@ -8,15 +8,10 @@
 
 -- ---------- STATION (dapur & bar) ----------
 create table if not exists stations (
-  id          text primary key,        -- 'goreng' | 'shaokao' | 'maincourse' | 'bar'
+  id          text primary key,        -- 'shaokao' | 'maincourse' | 'bar'
   name        text not null,
   sort_order  int  default 0
 );
--- Shao kao dikerjakan DUA tahap: digoreng dulu di station 'goreng',
--- baru dibakar di station 'shaokao'.
-insert into stations (id, name, sort_order)
-select 'goreng', 'Station Goreng', 0
-where not exists (select 1 from stations where id='goreng');
 
 -- ---------- MEJA ----------
 create table if not exists tables (
@@ -59,7 +54,9 @@ alter table menu_items add column if not exists daily_qty integer;
 alter table menu_items add column if not exists needs_cook_method boolean default false;
 -- true = pelanggan wajib pilih suhu (Es/Panas) + tingkat manis (Mondo/Manis/Tawar)
 alter table menu_items add column if not exists needs_drink_option boolean default false;
--- true = harus digoreng dulu sebelum dibakar (proses shao kao)
+-- true = digoreng dulu sebelum dibakar. Dikerjakan di station yang SAMA
+-- (shaokao), jadi ini keterangan proses, bukan perpindahan station.
+-- Sayur & jamur umumnya false; jamur enoki dikecualikan (true).
 alter table menu_items add column if not exists needs_fry_first boolean default false;
 -- diskon melekat pada menu, diatur admin (null/0 = tanpa diskon)
 alter table menu_items add column if not exists discount_percent numeric;
@@ -116,8 +113,9 @@ create table if not exists order_items (
 alter table order_items add column if not exists cook_method text;
 alter table order_items add column if not exists drink_temp text;   -- 'es' | 'panas'
 alter table order_items add column if not exists sweetness  text;   -- 'mondo' | 'manis' | 'tawar'
--- tahap proses yang sedang berjalan: 'goreng' -> 'bakar' (null = satu tahap)
-alter table order_items add column if not exists stage text;
+alter table order_items add column if not exists stage text;   -- warisan alur 2-station, tidak dipakai lagi
+-- snapshot proses saat dipesan, supaya struk lama tetap benar walau menunya diubah
+alter table order_items add column if not exists fry_first boolean default false;
 -- pembatalan PER ITEM (mis. bahan habis), terpisah dari void seluruh bill
 alter table order_items add column if not exists cancelled_at  timestamptz;
 alter table order_items add column if not exists cancel_reason text;

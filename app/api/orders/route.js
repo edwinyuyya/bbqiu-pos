@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../lib/supabaseServer';
 import { taxPercent } from '../../../lib/tax';
 import { COOK_METHOD_IDS, DRINK_TEMP_IDS, SWEETNESS_IDS } from '../../../lib/variants';
-import { STATION_GORENG } from '../../../lib/stations';
 import { recalcOrder } from '../../../lib/recalcOrder';
 import { ORDER_TERJADWAL } from '../../../lib/reservation';
 
@@ -90,12 +89,10 @@ export async function POST(req) {
         { status: 400 }
       );
     const qty = Math.max(1, parseInt(it.qty, 10) || 1);
-    // Menu shao kao digoreng dulu, baru dibakar. Baris pesanannya masuk ke
-    // station Goreng lebih dulu; setelah ditandai selesai di sana, barulah
-    // pindah sendiri ke station Bakaran.
-    const stationAkhir = m.station_id || m.categories?.station_id || null;
-    const duaTahap = !!m.needs_fry_first;
-    const station = duaTahap ? STATION_GORENG : stationAkhir;
+    const station = m.station_id || m.categories?.station_id || null;
+    // Sebagian menu shao kao digoreng dulu sebelum dibakar. Dikerjakan di
+    // station yang sama, jadi ini cuma keterangan proses yang ikut tercetak.
+    const gorengDulu = !!m.needs_fry_first;
     const cookMethod = COOK_METHOD_IDS.includes(it.cook_method) ? it.cook_method : null;
     if (m.needs_cook_method && !cookMethod)
       return NextResponse.json(
@@ -120,7 +117,7 @@ export async function POST(req) {
       cook_method: cookMethod,
       drink_temp: drinkTemp,
       sweetness,
-      stage: duaTahap ? 'goreng' : null,
+      fry_first: gorengDulu,
     });
   }
 

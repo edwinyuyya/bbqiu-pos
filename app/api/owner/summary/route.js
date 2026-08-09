@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../../lib/supabaseServer';
 import { STATION_IDS } from '../../../../lib/stations';
+import { ORDER_TERJADWAL } from '../../../../lib/reservation';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,12 @@ export async function GET(req) {
   const { data: orders } = await db
     .from('orders')
     .select('id, order_no, table_number, status, payment_method, payment_status, total, created_at, cancelled_at, void_reason, voided_by, void_photo')
-    .gte('created_at', startISO);
+    .gte('created_at', startISO)
+    // Pra-pesanan reservasi ('scheduled') belum terjadi: tamunya belum datang,
+    // makanannya belum dibuat, stoknya belum terpotong. Kalau ikut terhitung,
+    // jumlah order & HPP hari ini jadi menggelembung oleh sesuatu yang belum
+    // tentu jadi.
+    .neq('status', ORDER_TERJADWAL);
 
   const live = (orders || []).filter((o) => o.status !== 'cancelled');
 

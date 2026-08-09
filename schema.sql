@@ -519,3 +519,47 @@ drop policy if exists "allow all promos" on promos;
 create policy "allow all promos" on promos for all using (true) with check (true);
 grant select, insert, update, delete on promos to anon, authenticated;
 notify pgrst, 'reload schema';
+
+
+-- ============================================================
+--  RESERVASI + PRA-PESANAN
+-- ============================================================
+-- Reservasi TIDAK memblokir meja. Keterisian meja dihitung dari bill yang
+-- sedang berjalan, jadi meja yang dijanjikan tetap bebas dipakai tamu lain
+-- sampai reservasinya benar-benar datang. table_id di sini hanya RENCANA.
+create table if not exists reservations (
+  id             uuid default gen_random_uuid() primary key,
+  token          text not null unique,        -- untuk QR/link yang dikirim ke tamu
+  customer_name  text not null,
+  phone          text,
+  party_size     int not null default 2,
+  reserved_date  date not null,
+  reserved_time  time,
+  table_id       uuid references tables(id),  -- rencana meja (boleh kosong/diganti)
+  area_pref      text,
+  status         text not null default 'booked', -- booked | seated | cancelled | no_show
+  deposit_amount numeric default 0,           -- DP yang sudah diterima
+  deposit_note   text,
+  deposit_at     timestamptz,
+  note           text,
+  created_by     text,
+  created_at     timestamptz default now(),
+  seated_at      timestamptz,
+  closed_at      timestamptz
+);
+create index if not exists idx_reservations_date on reservations(reserved_date, status);
+
+-- Pra-pesanan = order berstatus 'scheduled'. Status ini sengaja di luar
+-- daftar yang dipakai dapur/kasir/laporan (semuanya memfilter
+-- open/preparing/served), jadi tidak dimasak, tidak ditagih, dan tidak
+-- menggelembungkan angka penjualan sebelum tamunya datang.
+alter table orders add column if not exists reservation_id uuid references reservations(id);
+-- pembayaran bertahap: DP dulu, sisanya saat datang
+alter table orders add column if not exists paid_amount numeric default 0;
+create index if not exists idx_orders_reservation on orders(reservation_id);
+
+alter table reservations enable row level security;
+drop policy if exists "allow all reservations" on reservations;
+create policy "allow all reservations" on reservations for all using (true) with check (true);
+grant select, insert, update, delete on reservations to anon, authenticated;
+notify pgrst, 'reload schema';

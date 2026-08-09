@@ -7,6 +7,7 @@ import PinGate from '../components/PinGate';
 import TablesTab from '../admin/TablesTab';
 import AvailabilityTab from './AvailabilityTab';
 import AntrianTab from './AntrianTab';
+import ReservasiTab from './ReservasiTab';
 import { stockLimitByMenu, attachStockLimit } from '../../lib/stockLimit';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -55,6 +56,7 @@ function WaiterPage() {
   const [items, setItems] = useState([]);
   const [calls, setCalls] = useState([]);
   const [antrian, setAntrian] = useState([]);
+  const [reservasi, setReservasi] = useState([]);
   const [mejaTerpakai, setMejaTerpakai] = useState({});
   const [origin, setOrigin] = useState('');
   const [soundOn, setSoundOn] = useState(false);
@@ -103,10 +105,12 @@ function WaiterPage() {
 
   // Antrian + status keterisian meja (dari order yang masih open).
   const loadAntrian = useCallback(async () => {
-    const [r, o] = await Promise.all([
+    const [r, o, rv] = await Promise.all([
       fetch('/api/waiting-list?status=aktif'),
       supabase.from('orders').select('table_id, created_at').eq('status', 'open'),
+      fetch('/api/reservations?upcoming=1').then((x) => x.json()).catch(() => ({ reservations: [] })),
     ]);
+    setReservasi(rv.reservations || []);
     const d = await r.json();
     setAntrian(d.antrian || []);
     const terpakai = {};
@@ -191,6 +195,9 @@ function WaiterPage() {
           📝 Antrian {antrian.filter((a) => a.status === 'waiting').length > 0
             ? `(${antrian.filter((a) => a.status === 'waiting').length})` : ''}
         </button>
+        <button className={`btn ${tab === 'reservasi' ? 'btn-brand' : ''}`} onClick={() => setTab('reservasi')}>
+          📅 Reservasi {reservasi.length > 0 ? `(${reservasi.length})` : ''}
+        </button>
         <button className={`btn ${tab === 'tables' ? 'btn-brand' : ''}`} onClick={() => setTab('tables')}>Meja &amp; QR</button>
         <button className={`btn ${tab === 'avail' ? 'btn-brand' : ''}`} onClick={() => setTab('avail')}>Ketersediaan Menu</button>
       </div>
@@ -215,6 +222,15 @@ function WaiterPage() {
       {tab === 'antri' && (
         <AntrianTab
           antrian={antrian}
+          tables={tables}
+          mejaTerpakai={mejaTerpakai}
+          reload={loadAntrian}
+          origin={origin}
+        />
+      )}
+      {tab === 'reservasi' && (
+        <ReservasiTab
+          reservations={reservasi}
           tables={tables}
           mejaTerpakai={mejaTerpakai}
           reload={loadAntrian}

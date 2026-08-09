@@ -16,7 +16,15 @@ function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
-export default function MenuClient({ token, table, categories, items, taxPercent, merchant }) {
+// mode='reservasi' -> halaman pra-pesan milik tamu reservasi. Bedanya:
+// tidak ada tombol panggil waiter (mejanya belum tentu miliknya sekarang),
+// tidak ada pilihan bayar (pelunasan dilakukan saat datang), dan setelah
+// kirim tetap kembali ke halaman reservasinya.
+export default function MenuClient({
+  token, table, categories, items, taxPercent, merchant,
+  mode = 'meja', headerExtra = null, judul = null,
+}) {
+  const reservasi = mode === 'reservasi';
   const router = useRouter();
   const [cart, setCart] = useState({}); // { cartKey: qty }
   const [notes, setNotes] = useState({}); // { cartKey: note }
@@ -100,7 +108,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
           token,
           customer_name: customerName,
           note: orderNote,
-          payment_method: payment,
+          payment_method: reservasi ? 'cashier' : payment,
           items: cartLines.map((l) => ({
             menu_item_id: l.item.id,
             qty: l.qty,
@@ -113,6 +121,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal membuat pesanan');
+      if (reservasi) { router.refresh(); setShowCart(false); setCart({}); setNotes({}); setSubmitting(false); return; }
       router.push(`/order/${data.order_id}`);
     } catch (e) {
       setError(e.message);
@@ -122,7 +131,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
 
   return (
     <div className="cust-page">
-    <CallWaiterButton tableId={table.id} tableNumber={table.table_number} />
+    {!reservasi && <CallWaiterButton tableId={table.id} tableNumber={table.table_number} />}
     <div className="container-sm" style={{ paddingBottom: 90 }}>
       <div className="brand-hero">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,8 +146,10 @@ export default function MenuClient({ token, table, categories, items, taxPercent
       </div>
       <header style={{ padding: '4px 0 12px' }}>
         <div className="muted small">{merchant}</div>
-        <h1 className="title">Menu · Meja {table.table_number}</h1>
+        <h1 className="title">{judul || `Menu · Meja ${table.table_number}`}</h1>
       </header>
+
+      {headerExtra && <div className="col" style={{ marginBottom: 14 }}>{headerExtra}</div>}
 
       {/* Pencarian menempel di atas supaya tetap terjangkau sambil menggulir */}
       <div
@@ -341,7 +352,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
         >
           <div className="container-sm" style={{ padding: '0 16px' }}>
             <button className="btn btn-brand btn-block" onClick={() => setShowCart(true)}>
-              Lihat Keranjang · {totalQty} item · {rupiah(total)}
+              {reservasi ? 'Lihat Pra-pesanan' : 'Lihat Keranjang'} · {totalQty} item · {rupiah(total)}
             </button>
           </div>
         </div>
@@ -365,7 +376,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
             onClick={(e) => e.stopPropagation()}
           >
             <div className="between" style={{ padding: '16px 0' }}>
-              <h2 className="h2">Keranjang · Meja {table.table_number}</h2>
+              <h2 className="h2">{reservasi ? 'Pra-pesanan' : `Keranjang · Meja ${table.table_number}`}</h2>
               <button className="btn" onClick={() => setShowCart(false)}>Tutup</button>
             </div>
 
@@ -435,6 +446,17 @@ export default function MenuClient({ token, table, categories, items, taxPercent
               <div className="between"><span className="bold">Total</span><span className="bold">{rupiah(total)}</span></div>
             </div>
 
+            {reservasi && (
+              <div className="card" style={{ marginTop: 12 }}>
+                <p className="small muted" style={{ margin: 0 }}>
+                  Pra-pesanan ini belum dikirim ke dapur. Pelunasan dilakukan
+                  saat Anda tiba, dan masakan baru dibuat setelah itu supaya
+                  sampai di meja dalam keadaan hangat.
+                </p>
+              </div>
+            )}
+
+            {!reservasi && (
             <div className="card" style={{ marginTop: 12 }}>
               <div className="h2" style={{ marginBottom: 10 }}>Metode Pembayaran</div>
               <div className="col">
@@ -448,6 +470,7 @@ export default function MenuClient({ token, table, categories, items, taxPercent
                 </label>
               </div>
             </div>
+            )}
 
             {error && (
               <div className="card" style={{ marginTop: 12, borderColor: 'var(--red)' }}>
@@ -461,7 +484,11 @@ export default function MenuClient({ token, table, categories, items, taxPercent
               disabled={submitting}
               onClick={submitOrder}
             >
-              {submitting ? 'Memproses…' : `Pesan Sekarang · ${rupiah(total)}`}
+              {submitting
+                ? 'Memproses…'
+                : reservasi
+                  ? `Simpan Pra-pesanan · ${rupiah(total)}`
+                  : `Pesan Sekarang · ${rupiah(total)}`}
             </button>
           </div>
         </div>

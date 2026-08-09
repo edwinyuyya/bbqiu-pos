@@ -4,6 +4,7 @@ import { taxPercent } from '../../../lib/tax';
 import { COOK_METHOD_IDS, DRINK_TEMP_IDS, SWEETNESS_IDS } from '../../../lib/variants';
 import { STATION_GORENG } from '../../../lib/stations';
 import { recalcOrder } from '../../../lib/recalcOrder';
+import { ORDER_TERJADWAL } from '../../../lib/reservation';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,16 +28,34 @@ export async function POST(req) {
   if (!['qris', 'cashier'].includes(payment_method))
     return NextResponse.json({ error: 'Metode bayar tidak valid' }, { status: 400 });
 
-  // 1) Validasi meja
-  const { data: table, error: tErr } = await db
-    .from('tables')
-    .select('id, table_number, active')
+  // 1) Token bisa milik MEJA (pesanan biasa) atau milik RESERVASI (pra-pesanan).
+  // Dibedakan sejak awal karena akibatnya jauh berbeda: pra-pesanan tidak
+  // boleh menempel ke bill meja mana pun — kalau menempel, tamu yang sedang
+  // duduk di meja itu akan ditagih makanan orang lain.
+  const { data: reservasi } = await db
+    .from('reservations')
+    .select('id, status, customer_name, reserved_date, table_id')
     .eq('token', token)
-    .single();
-  if (tErr || !table)
-    return NextResponse.json({ error: 'Meja tidak ditemukan' }, { status: 404 });
-  if (table.active === false)
-    return NextResponse.json({ error: 'Meja tidak aktif' }, { status: 400 });
+    .maybeSingle();
+
+  let table = null;
+  if (!reservasi) {
+    const { data: t, error: tErr } = await db
+      .from('tables')
+      .select('id, table_number, active')
+      .eq('token', token)
+      .single();
+    if (tErr || !t)
+      return NextResponse.json({ error: 'Meja tidak ditemukan' }, { status: 404 });
+    if (t.active === false)
+      return NextResponse.json({ error: 'Meja tidak aktif' }, { status: 400 });
+    table = t;
+  } else if (reservasi.status !== 'booked') {
+    return NextResponse.json(
+      { error: 'Reservasi ini sudah tidak berlaku untuk pra-pesanan.' },
+      { status: 400 }
+    );
+  }
 
   // 2) Ambil menu otoritatif dari DB (harga & station dari server, bukan client)
   const ids = [...new Set(items.map((i) => i.menu_item_id))];
@@ -127,15 +146,29 @@ export async function POST(req) {
   // baru menempel ke bill itu sebagai tambahan — bukan bikin bill sendiri.
   // Bill yang sudah lunas sengaja tidak diutak-atik: menambah item ke sana
   // akan membuat jumlah yang sudah dibayar tidak lagi cocok dengan totalnya.
-  const { data: billBerjalan } = await db
-    .from('orders')
-    .select('*')
-    .eq('table_id', table.id)
-    .in('status', ['open', 'preparing', 'served'])
-    .neq('payment_status', 'paid')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Pra-pesanan reservasi punya "bill"-nya sendiri berstatus 'scheduled' dan
+  // TIDAK pernah menempel ke bill meja — meja belum tentu miliknya saat ini.
+  let billBerjalan = null;
+  if (reservasi) {
+    const { data } = await db
+      .from('orders')
+      .select('*')
+      .eq('reservation_id', reservasi.id)
+      .eq('status', 'scheduled')
+      .maybeSingle();
+    billBerjalan = data || null;
+  } else {
+    const { data } = await db
+      .from('orders')
+      .select('*')
+      .eq('table_id', table.id)
+      .in('status', ['open', 'preparing', 'served'])
+      .neq('payment_status', 'paid')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    billBerjalan = data || null;
+  }
 
   const tambahanSubtotal = lineItems.reduce((s, l) => s + l.price * l.qty, 0);
   let order;
@@ -173,6 +206,7 @@ export async function POST(req) {
       tax: taxBaru,
       total: subtotalBaru + taxBaru,
       payment_method, // pelanggan boleh ganti cara bayar untuk total barunya
+      // Pra-pesanan tetap 'scheduled' sampai tamunya benar-benar datang.
       status: billBerjalan.status === 'served' ? 'open' : billBerjalan.status,
     };
     if (!billBerjalan.customer_name && customer_name)
@@ -191,9 +225,12 @@ export async function POST(req) {
     const { data: baru, error: oErr } = await db
       .from('orders')
       .insert({
-        table_id: table.id,
-        table_number: table.table_number,
-        status: 'open',
+        // Pra-pesanan belum punya meja pasti — mejanya ditentukan saat tamu
+        // datang. Statusnya 'scheduled' supaya tidak masuk dapur & kasir.
+        table_id: reservasi ? null : table.id,
+        table_number: reservasi ? null : table.table_number,
+        reservation_id: reservasi ? reservasi.id : null,
+        status: reservasi ? ORDER_TERJADWAL : 'open',
         payment_method,
         payment_status: 'unpaid',
         subtotal: tambahanSubtotal,
@@ -219,14 +256,17 @@ export async function POST(req) {
 
   // Antrian cetak dapur dicatat per gelombang, supaya struk tambahan hanya
   // memuat pesanan barunya saja.
-  await db.from('print_jobs').insert({ order_id: order.id, status: 'pending', batch_no: batchNo });
+  // Pra-pesanan belum dicetak ke dapur — struknya baru dibuat saat tamu datang.
+  if (!reservasi) {
+    await db.from('print_jobs').insert({ order_id: order.id, status: 'pending', batch_no: batchNo });
+  }
 
   // Hitung ulang lewat jalur yang sama dengan promo & pembatalan item, supaya
   // diskon per menu langsung terpasang dan tidak ada dua rumus total.
   await recalcOrder(db, order.id);
 
   // 7) Kurangi sisa porsi (menu berporsi terbatas). Auto-tutup saat 0.
-  for (const m of menu || []) {
+  for (const m of reservasi ? [] : (menu || [])) {
     if (m.daily_qty == null) continue;
     const ordered = qtyByMenu[m.id] || 0;
     if (!ordered) continue;
@@ -236,8 +276,9 @@ export async function POST(req) {
     await db.from('menu_items').update(patch).eq('id', m.id);
   }
 
-  // 8) Potong stok bahan otomatis sesuai resep (BOM)
-  const invIds = Object.keys(neededByInv);
+  // 8) Potong stok bahan otomatis sesuai resep (BOM).
+  // Pra-pesanan dilewati: bahannya belum dipakai, dan tamunya bisa batal.
+  const invIds = reservasi ? [] : Object.keys(neededByInv);
   if (invIds.length) {
     for (const invId of invIds) {
       const n = neededByInv[invId];

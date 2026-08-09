@@ -114,8 +114,10 @@ alter table order_items add column if not exists cook_method text;
 alter table order_items add column if not exists drink_temp text;   -- 'es' | 'panas'
 alter table order_items add column if not exists sweetness  text;   -- 'mondo' | 'manis' | 'tawar'
 alter table order_items add column if not exists stage text;   -- warisan alur 2-station, tidak dipakai lagi
--- snapshot proses saat dipesan, supaya struk lama tetap benar walau menunya diubah
+-- snapshot proses & kategori saat dipesan, supaya struk lama tetap benar
+-- walau menunya nanti diubah atau dipindah kategori
 alter table order_items add column if not exists fry_first boolean default false;
+alter table order_items add column if not exists category_name text;
 -- pembatalan PER ITEM (mis. bahan habis), terpisah dari void seluruh bill
 alter table order_items add column if not exists cancelled_at  timestamptz;
 alter table order_items add column if not exists cancel_reason text;

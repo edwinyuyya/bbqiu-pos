@@ -10,6 +10,19 @@ export const dynamic = 'force-dynamic';
 
 const STATIONS = STATION_LIST.map((s) => ({ id: s.id, name: s.cetak }));
 
+// Kelompokkan per kategori supaya struk terbaca sekali lihat: bagian mana
+// shao kao, mana grill/steamboat, mana snack.
+function perKategori(items) {
+  const urut = [];
+  const byKat = new Map();
+  for (const it of items) {
+    const kat = it.category_name || 'Lainnya';
+    if (!byKat.has(kat)) { byKat.set(kat, []); urut.push(kat); }
+    byKat.get(kat).push(it);
+  }
+  return urut.map((kat) => ({ kat, items: byKat.get(kat) }));
+}
+
 function fmtTime(ts) {
   return new Date(ts).toLocaleString('id-ID', {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -123,18 +136,23 @@ export default async function PrintPage({ params, searchParams }) {
               </span>
             </div>
             <div className="line" />
-            {s.items.map((it) => (
-              <div key={it.id} style={{ marginBottom: 4 }}>
-                <div className="item">
-                  <span>
-                    <b>{it.qty}x</b> {it.name}
-                    {variantLabels(it, { emoji: false }).map((lab) => (
-                      <b key={lab}> [{lab.toUpperCase()}]</b>
-                    ))}
-                    {it.fry_first && <b> [GORENG DULU]</b>}
-                  </span>
-                </div>
-                {it.note && <div style={{ fontStyle: 'italic', paddingLeft: 8 }}>* {it.note}</div>}
+            {perKategori(s.items).map((g) => (
+              <div key={g.kat} style={{ marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, textTransform: 'uppercase' }}>» {g.kat}</div>
+                {g.items.map((it) => (
+                  <div key={it.id} style={{ marginBottom: 4 }}>
+                    <div className="item">
+                      <span>
+                        <b>{it.qty}x</b> {it.name}
+                        {variantLabels(it, { emoji: false }).map((lab) => (
+                          <b key={lab}> [{lab.toUpperCase()}]</b>
+                        ))}
+                        {it.fry_first && <b> [GORENG DULU]</b>}
+                      </span>
+                    </div>
+                    {it.note && <div style={{ fontStyle: 'italic', paddingLeft: 8 }}>* {it.note}</div>}
+                  </div>
+                ))}
               </div>
             ))}
             <div className="line" />

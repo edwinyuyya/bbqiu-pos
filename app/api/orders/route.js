@@ -60,7 +60,7 @@ export async function POST(req) {
   const ids = [...new Set(items.map((i) => i.menu_item_id))];
   const { data: menu, error: mErr } = await db
     .from('menu_items')
-    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, needs_drink_option, needs_fry_first, categories(station_id)')
+    .select('id, name, price, available, daily_qty, station_id, category_id, needs_cook_method, needs_drink_option, needs_fry_first, categories(name, station_id)')
     .in('id', ids);
   if (mErr)
     return NextResponse.json({ error: 'Gagal membaca menu' }, { status: 500 });
@@ -118,6 +118,7 @@ export async function POST(req) {
       drink_temp: drinkTemp,
       sweetness,
       fry_first: gorengDulu,
+      category_name: m.categories?.name || null,
     });
   }
 

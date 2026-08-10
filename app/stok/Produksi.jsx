@@ -34,9 +34,13 @@ export default function Produksi({ items, reload }) {
 /* ================= CATAT PRODUKSI ================= */
 function CatatProduksi({ items, reload }) {
   const [outputId, setOutputId] = useState('');
+  const [cara, setCara] = useState('porsi');  // porsi | satuan
+  const [menuId, setMenuId] = useState('');
+  const [porsi, setPorsi] = useState('');
   const [qty, setQty] = useState('');
   const [note, setNote] = useState('');
   const [resep, setResep] = useState(null);   // resep bahan jadi terpilih
+  const [menus, setMenus] = useState([]);     // menu yang memakai bahan ini
   const [memuat, setMemuat] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pesan, setPesan] = useState('');
@@ -46,37 +50,57 @@ function CatatProduksi({ items, reload }) {
   const itemById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
 
   useEffect(() => {
-    if (!outputId) { setResep(null); return; }
+    setMenuId(''); setPorsi(''); setQty('');
+    if (!outputId) { setResep(null); setMenus([]); return; }
     setMemuat(true);
     fetch(`/api/production?output=${outputId}`)
       .then((r) => r.json())
-      .then((d) => setResep(d.recipes || []))
-      .catch(() => setResep([]))
+      .then((d) => {
+        setResep(d.recipes || []);
+        setMenus(d.menus || []);
+        // Kalau bahan ini dipakai menu, isi porsi jadi cara yang wajar;
+        // kalau tidak (mis. bumbu curah), langsung isi satuannya.
+        setCara((d.menus || []).length ? 'porsi' : 'satuan');
+        if ((d.menus || []).length === 1) setMenuId(d.menus[0].id);
+      })
+      .catch(() => { setResep([]); setMenus([]); })
       .finally(() => setMemuat(false));
   }, [outputId]);
 
-  const jumlah = Number(qty) || 0;
+  const menu = menus.find((m) => m.id === menuId);
+  const perPorsi = Number(menu?.per_porsi) || 0;
+  // Semua perhitungan stok tetap dalam satuan bahan (gram). "Porsi" cuma
+  // cara mengetiknya, karena satu bahan dipakai beberapa menu dengan takaran
+  // berbeda — stok per porsi akan ambigu porsi menu yang mana.
+  const jumlah = cara === 'porsi'
+    ? Math.round(perPorsi * (Number(porsi) || 0) * 1000) / 1000
+    : Number(qty) || 0;
 
   async function simpan() {
     setError(''); setPesan('');
     if (!outputId) return setError('Pilih dulu bahan hasil produksinya.');
+    if (cara === 'porsi' && !menuId) return setError('Pilih menunya dulu supaya takaran per porsi diketahui.');
     if (!(jumlah > 0)) return setError('Jumlah hasil produksi wajib diisi.');
     setBusy(true);
     try {
+      const catatan = cara === 'porsi' && menu
+        ? [`${angka(Number(porsi))} porsi ${menu.name}`, note].filter(Boolean).join(' — ')
+        : note;
       const r = await fetch('/api/production', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ output_item_id: outputId, qty: jumlah, note }),
+        body: JSON.stringify({ output_item_id: outputId, qty: jumlah, note: catatan }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Gagal menyimpan produksi');
       setPesan(
         `✓ ${angka(jumlah)} ${output?.unit} ${output?.name} ditambahkan` +
+        (cara === 'porsi' && menu ? ` (= ${angka(Number(porsi))} porsi ${menu.name})` : '') +
         (d.dipakai?.length ? `, ${d.dipakai.length} bahan mentah berkurang` : '')
       );
-      setQty(''); setNote('');
+      setPorsi(''); setQty(''); setNote('');
       await reload();
-      setTimeout(() => setPesan(''), 6000);
+      setTimeout(() => setPesan(''), 8000);
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   }
@@ -95,15 +119,80 @@ function CatatProduksi({ items, reload }) {
           ))}
         </select>
 
-        <label className="muted small" style={{ display: 'block', marginTop: 12 }}>
-          Jumlah hasil {output ? `(dalam ${output.unit})` : ''}
-        </label>
-        <input className="input" style={{ marginTop: 4 }} inputMode="decimal"
-          placeholder={output ? `Jumlah dalam ${output.unit}` : 'Pilih bahan dulu'}
-          value={qty} onChange={(e) => setQty(e.target.value)} />
+        {outputId && menus.length > 0 && (
+          <div className="row" style={{ marginTop: 12, flexWrap: 'wrap' }}>
+            <button className={`btn ${cara === 'porsi' ? 'btn-brand' : ''}`}
+              onClick={() => setCara('porsi')}>Hitung dari porsi menu</button>
+            <button className={`btn ${cara === 'satuan' ? 'btn-brand' : ''}`}
+              onClick={() => setCara('satuan')}>Isi langsung ({output?.unit})</button>
+          </div>
+        )}
+
+        {outputId && cara === 'porsi' && menus.length > 0 && (
+          <>
+            <label className="muted small" style={{ display: 'block', marginTop: 12 }}>Menu yang diproduksi</label>
+            <select className="select" style={{ marginTop: 4 }} value={menuId}
+              onChange={(e) => setMenuId(e.target.value)}>
+              <option value="">— Pilih menu —</option>
+              {menus.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} · {angka(m.per_porsi)} {output?.unit}/porsi
+                </option>
+              ))}
+            </select>
+
+            <label className="muted small" style={{ display: 'block', marginTop: 12 }}>Jumlah porsi</label>
+            <input className="input" style={{ marginTop: 4 }} inputMode="decimal"
+              placeholder="mis. 5" value={porsi} onChange={(e) => setPorsi(e.target.value)} />
+
+            {menuId && jumlah > 0 && (
+              <p className="small" style={{ marginTop: 6 }}>
+                {angka(Number(porsi))} porsi × {angka(perPorsi)} {output?.unit} ={' '}
+                <b>{angka(jumlah)} {output?.unit}</b> masuk stok{' '}
+                <b>{output?.name}</b>.
+              </p>
+            )}
+          </>
+        )}
+
+        {outputId && (cara === 'satuan' || menus.length === 0) && (
+          <>
+            <label className="muted small" style={{ display: 'block', marginTop: 12 }}>
+              Jumlah hasil {output ? `(dalam ${output.unit})` : ''}
+            </label>
+            <input className="input" style={{ marginTop: 4 }} inputMode="decimal"
+              placeholder={output ? `Jumlah dalam ${output.unit}` : 'Pilih bahan dulu'}
+              value={qty} onChange={(e) => setQty(e.target.value)} />
+          </>
+        )}
 
         <input className="input" style={{ marginTop: 10 }} placeholder="Catatan (opsional)"
           value={note} onChange={(e) => setNote(e.target.value)} />
+
+        {/* Stok bahan ini setara berapa porsi tiap menu, sesudah produksi ini */}
+        {outputId && menus.length > 0 && (
+          <div className="card" style={{ marginTop: 12, background: 'var(--card2)' }}>
+            <div className="bold small" style={{ marginBottom: 6 }}>
+              Setelah disimpan, stok {output?.name} cukup untuk
+            </div>
+            {menus.map((m) => {
+              const sisa = Number(output?.stock_qty || 0) + jumlah;
+              return (
+                <div key={m.id} className="between small" style={{ marginBottom: 4 }}>
+                  <span>{m.name}</span>
+                  <span>
+                    <b>{Math.floor(sisa / m.per_porsi)} porsi</b>
+                    <span className="muted"> · {angka(m.per_porsi)} {output?.unit}/porsi</span>
+                  </span>
+                </div>
+              );
+            })}
+            <p className="muted small" style={{ margin: '6px 0 0' }}>
+              Angka ini berbagi stok yang sama — kalau satu menu terjual,
+              sisa porsi menu lain ikut turun.
+            </p>
+          </div>
+        )}
 
         {/* Pratinjau: apa yang akan berkurang */}
         {outputId && (

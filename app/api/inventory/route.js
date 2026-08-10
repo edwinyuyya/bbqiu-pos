@@ -34,7 +34,6 @@ export async function POST(req) {
       supplier: b.supplier || null,
       supplier_verified: b.supplier_verified !== false,
       invoice_no: b.invoice_no ? String(b.invoice_no).trim() : null,
-      barcode: b.barcode ? String(b.barcode).trim() : null,
       expiry_date: b.expiry_date || null,
       shelf_life_days: b.shelf_life_days ? Number(b.shelf_life_days) : null,
       received_date: Number(b.stock_qty) > 0 ? today : null,

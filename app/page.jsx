@@ -23,7 +23,7 @@ export default function Home() {
     {
       href: '/stok',
       title: '📦 Stok & Belanja',
-      desc: 'Update stok saat barang datang (tap / scan barcode), opname, low-stock.',
+      desc: 'Catat barang datang, produksi bahan jadi, opname, dan pantau stok menipis.',
     },
     {
       href: '/waiter',

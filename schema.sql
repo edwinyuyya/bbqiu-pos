@@ -373,43 +373,6 @@ grant select, insert, update, delete on recipe_items to anon, authenticated;
 notify pgrst, 'reload schema';
 
 -- ============================================================
---  BATCH / LOT TRACKING + FIFO (bumbu produksi & daging gelondongan)
--- ============================================================
-create table if not exists stock_batches (
-  id                uuid default gen_random_uuid() primary key,
-  inventory_item_id uuid references inventory_items(id) on delete cascade,
-  batch_code        text not null unique,          -- isi QR label: BATCH:<batch_code>
-  source_type       text not null default 'produksi', -- 'produksi' (bumbu) | 'penerimaan' (daging/gelondongan)
-  produced_date     date not null,                   -- dasar urutan FIFO, TIDAK berubah saat repack
-  initial_qty       numeric not null default 0,
-  qty_remaining     numeric not null default 0,
-  unit              text,
-  status            text not null default 'active',  -- active | depleted | repacked | void
-  parent_batch_id   uuid references stock_batches(id), -- diisi di batch ANAK hasil repack
-  supplier          text,
-  invoice_no        text,
-  cost_price        numeric,
-  note              text,
-  created_by        text,
-  created_at        timestamptz default now(),
-  consumed_at       timestamptz
-);
-create index if not exists idx_batches_item_status on stock_batches(inventory_item_id, status, produced_date);
-create index if not exists idx_batches_code on stock_batches(batch_code);
-create index if not exists idx_batches_parent on stock_batches(parent_batch_id);
-
-alter table inventory_items add column if not exists batch_tracked boolean default false;
-alter table stock_batches add column if not exists void_reason text;
-alter table stock_batches add column if not exists voided_at timestamptz;
-
-alter table stock_batches enable row level security;
-drop policy if exists "allow all stock_batches" on stock_batches;
-create policy "allow all stock_batches" on stock_batches for all using (true) with check (true);
-
-grant select, insert, update, delete on stock_batches to anon, authenticated;
-notify pgrst, 'reload schema';
-
--- ============================================================
 --  PANGGIL WAITER (tombol pelanggan minta bantuan staf)
 -- ============================================================
 create table if not exists waiter_calls (
@@ -568,4 +531,35 @@ alter table reservations enable row level security;
 drop policy if exists "allow all reservations" on reservations;
 create policy "allow all reservations" on reservations for all using (true) with check (true);
 grant select, insert, update, delete on reservations to anon, authenticated;
+notify pgrst, 'reload schema';
+
+
+-- ============================================================
+--  RESEP PRODUKSI (bahan mentah -> bahan siap pakai)
+-- ============================================================
+-- Sistem batch/label & barcode DIHAPUS: stok cukup dicatat sebagai angka.
+--   drop table if exists stock_batches cascade;
+--   alter table inventory_items drop column if exists batch_tracked;
+--   alter table inventory_items drop column if exists barcode;
+--
+-- Produksi mengubah bahan mentah jadi bahan siap pakai dalam SATU langkah:
+-- stok hasil bertambah, bahan mentahnya berkurang. Sebelumnya dua tindakan
+-- terpisah dan yang kedua hampir selalu terlewat, sehingga bahan tercatat
+-- dua kali.
+create table if not exists production_recipes (
+  id             uuid default gen_random_uuid() primary key,
+  output_item_id uuid not null references inventory_items(id) on delete cascade,
+  input_item_id  uuid not null references inventory_items(id) on delete cascade,
+  qty            numeric not null default 1,  -- input per 1 satuan output
+                                              -- >1 menampung susut potong
+  created_at     timestamptz default now()
+);
+create unique index if not exists idx_prodrecipe_pair
+  on production_recipes(output_item_id, input_item_id);
+create index if not exists idx_prodrecipe_out on production_recipes(output_item_id);
+
+alter table production_recipes enable row level security;
+drop policy if exists "allow all production_recipes" on production_recipes;
+create policy "allow all production_recipes" on production_recipes for all using (true) with check (true);
+grant select, insert, update, delete on production_recipes to anon, authenticated;
 notify pgrst, 'reload schema';

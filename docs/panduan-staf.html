@@ -217,8 +217,8 @@
   <h3>5 — Satu meja = satu bill</h3>
   <p>Pelanggan yang menambah pesanan dari QR meja yang sama otomatis masuk ke bill yang sedang berjalan. Anda tidak perlu menggabungkan apa pun secara manual.</p>
 
-  <h3>6 — Daging masuk lewat "Terima Daging", bukan "Barang Datang"</h3>
-  <p>Daging perlu label batch untuk urutan pemakaian (yang lama dipakai duluan). Kalau masuk lewat jalur yang salah, labelnya tidak pernah ada dan urutan pemakaian jadi kacau.</p>
+  <h3>6 — Bahan yang dibuat sendiri dicatat lewat Produksi, bukan Barang Datang</h3>
+  <p><b>Barang Datang</b> hanya untuk barang yang benar-benar baru datang dari supplier. Bahan yang dibuat sendiri dari bahan lain — misalnya daging gelondongan diiris jadi porsi — dicatat lewat tab <b>🍳 Produksi</b>, supaya bahan mentahnya ikut berkurang otomatis.</p>
 
   <div class="box tips" style="margin-top:20px">
     <p class="judul">Kalau ragu</p>
@@ -633,40 +633,44 @@
     <p>Sisa porsi yang tampil ke waiter dihitung dari <b>bahan siap pakai</b> dibagi kebutuhan resep. Jadi kalau habis produksi, yang Anda tambahkan adalah bahan siap pakainya — bukan menunya.</p>
   </div>
 
-  <h3>Barang Datang vs Terima Daging</h3>
-  <table>
-    <tr><th style="width:26%"></th><th style="width:37%">📥 Barang Datang</th><th>🥩 Terima Daging</th></tr>
-    <tr><td><b>Untuk</b></td><td>Barang kemasan pabrik: gula, teh, minyak, sedotan, sosis, bakso, soft drink</td><td>Barang yang perlu urutan pakai &amp; jejak asal: daging, seafood, bahan mahal</td></tr>
-    <tr><td><b>Input</b></td><td>Banyak barang sekaligus, bisa scan barcode</td><td>Satu bahan per input</td></tr>
-    <tr><td><b>Label batch</b></td><td>Tidak ada</td><td><b>Ada</b> — bisa dicetak &amp; ditempel</td></tr>
-    <tr><td><b>Supplier &amp; invoice</b></td><td>Tidak dicatat</td><td>Dicatat</td></tr>
-    <tr><td><b>Bisa di-scan saat dipakai</b></td><td>Tidak</td><td>Ya</td></tr>
-  </table>
+  <h3>Mencatat barang datang</h3>
+  <p>Tab <b>📥 Barang Datang</b>. Cari barangnya, tekan + sebanyak yang datang, boleh banyak barang sekaligus, lalu simpan. Selesai.</p>
+  <p>Tab ini <b>hanya untuk barang dari supplier</b>. Bahan yang Anda buat sendiri jangan dicatat di sini.</p>
 
   <div class="box awas">
-    <p class="judul">Jangan pakai keduanya untuk kiriman yang sama</p>
-    <p>Stok akan bertambah dua kali. Pilih salah satu per kiriman.</p>
+    <p class="judul">Jangan catat hasil produksi sebagai barang datang</p>
+    <p>Kalau daging gelondongan diiris jadi porsi lalu dicatat lewat Barang Datang, daging itu tercatat dua kali — sekali sebagai gelondongan, sekali sebagai potongan. Stok kelihatan lebih banyak dari kenyataan. Gunakan tab Produksi.</p>
   </div>
 </div>
 
 <div class="page">
-  <h3>Menambah stok setelah produksi (slicing daging)</h3>
-  <p>Contoh: Anda mengiris daging jadi 10 porsi <b>steak karubi 30cm</b>.</p>
+  <h3>Produksi — mengubah bahan mentah jadi bahan siap pakai</h3>
+  <p>Contoh: mengiris daging jadi porsi karubi, atau membuat bumbu dari beberapa bahan.</p>
+
+  <h4>Sekali saja: atur resep produksinya</h4>
   <ol class="langkah">
-    <li>Buka <b>Stok → 🏷️ Produksi &amp; Batch → 🧂 Produksi Bumbu</b>. Meski namanya "bumbu", ini dipakai untuk semua hasil produksi.</li>
-    <li>Pilih bahan <b>steak karubi 30cm (Maincourse)</b>.</li>
-    <li>Isi jumlahnya <b>dalam gram, bukan porsi</b>. Resepnya 130 g per porsi, jadi 10 porsi = <b>1.300 gram</b>.</li>
-    <li>Tekan simpan. Label batch tercetak dengan tanggal produksi.</li>
-    <li>Buka <b>📷 Scan Pakai/Repack</b> untuk mengurangi daging gelondongan yang tadi Anda potong.</li>
+    <li>Buka <b>Stok → 🍳 Produksi → ⚙️ Atur Resep Produksi</b>.</li>
+    <li>Pilih <b>bahan hasil</b>, misalnya <i>karubi (Maincourse)</i>.</li>
+    <li>Tambahkan <b>bahan mentahnya</b>, misalnya <i>US Karubi</i>, dengan takaran <b>1,15</b> — artinya butuh 1,15 gram gelondongan untuk menghasilkan 1 gram potongan siap pakai. Selisihnya adalah tulang dan lemak yang terbuang.</li>
+  </ol>
+  <p>Cukup diatur sekali. Setelah itu produksi tinggal isi jumlah.</p>
+
+  <h4>Setiap kali produksi</h4>
+  <ol class="langkah">
+    <li>Buka <b>Stok → 🍳 Produksi → 🍳 Catat Produksi</b>.</li>
+    <li>Pilih bahan hasilnya.</li>
+    <li>Isi <b>jumlah hasil</b> dalam satuannya. Untuk 10 porsi steak karubi @130 gram, isi <b>1.300</b> gram.</li>
+    <li>Lihat daftar <b>bahan mentah yang akan berkurang</b> — periksa sebentar apakah masuk akal.</li>
+    <li>Tekan <b>Simpan Produksi</b>.</li>
   </ol>
 
-  <div class="box awas">
-    <p class="judul">Langkah 5 wajib, jangan dilewat</p>
-    <p>Menu Produksi <b>hanya menambah</b> bahan siap pakai — tidak otomatis mengurangi gelondongannya. Kalau langkah 5 terlewat, daging tercatat dua kali dan stok Anda kelihatan lebih banyak dari kenyataan.</p>
+  <div class="box tips">
+    <p class="judul">Satu langkah, dua akibat</p>
+    <p>Sekali simpan, stok bahan jadi <b>bertambah</b> dan bahan mentahnya <b>berkurang</b> otomatis. Tidak ada langkah kedua yang bisa terlupa.</p>
   </div>
 
   <div class="box info">
-    <p class="judul">Kenapa gram, bukan porsi?</p>
+    <p class="judul">Kenapa isinya gram, bukan porsi?</p>
     <p>Karena satu bahan dipakai beberapa menu dengan porsi berbeda. <b>karubi (Maincourse)</b> dipakai menu "karubi" (100 g) dan "karubi small" (30 g). Kalau satuannya porsi, keduanya tidak bisa berbagi stok yang sama.</p>
   </div>
 
@@ -677,14 +681,14 @@
     <tr><td><b>🧮 Opname Massal</b></td><td>Hitung fisik lalu samakan angkanya. Lakukan rutin — ini satu-satunya cara memperbaiki stok yang sudah meleset.</td></tr>
     <tr><td><b>+ Barang</b></td><td>Daftarkan bahan baru.</td></tr>
     <tr><td><b>🚚 Supplier</b></td><td>Daftar pemasok.</td></tr>
-    <tr><td><b>📋 Daftar Batch Aktif</b></td><td>Lihat batch yang masih ada, urut dari yang paling lama (dipakai duluan).</td></tr>
   </table>
 
   <div class="box ingat">
     <p class="judul">Stok minus itu wajar, tapi harus diluruskan</p>
-    <p>Sistem sengaja mengizinkan stok minus supaya pesanan pelanggan tidak pernah tertolak gara-gara stok belum diinput. Angka minus artinya: bahan ini terpakai tapi belum pernah dicatat masuk. Perbaiki lewat Opname.</p>
+    <p>Sistem sengaja mengizinkan stok minus supaya pesanan pelanggan dan produksi tidak pernah tertolak gara-gara catatan belum lengkap. Angka minus artinya: bahan ini terpakai tapi belum pernah dicatat masuk. Perbaiki lewat Opname.</p>
   </div>
 </div>
+
 <!-- ================= 10. ADMIN ================= -->
 <div class="page">
   <div class="judul-peran"><h2>10. Admin — Menu, Harga, Diskon</h2><p>Buka: halaman <b>Admin</b> · perlu PIN admin</p></div>
@@ -789,6 +793,9 @@
     <tr><td><b>Struk dapur mencetak semua menu lagi</b></td>
         <td>Perhatikan tulisan "PESANAN TAMBAHAN ke-2" di kepala struk. Kalau ada, hanya isi struk itu yang perlu dimasak.</td></tr>
 
+    <tr><td><b>Stok bahan jadi bertambah tapi mentahnya tidak berkurang</b></td>
+        <td>Bahan itu belum punya resep produksi. Atur di <b>Stok → 🍳 Produksi → ⚙️ Atur Resep Produksi</b>.</td></tr>
+
     <tr><td><b>Sisa porsi tertulis "belum diinput"</b></td>
         <td>Stok gudang memang belum pernah diisi. Bukan kerusakan. Isi lewat halaman Stok.</td></tr>
 
@@ -843,7 +850,7 @@
       <b>3.</b> Menu habis → batalkan itemnya saja (tombol ✖), bukan seluruh bill<br>
       <b>4.</b> Diskon dipasang sebelum uang diterima<br>
       <b>5.</b> Satu meja satu bill — pesanan tambahan otomatis bergabung<br>
-      <b>6.</b> Daging masuk lewat "Terima Daging", bukan "Barang Datang"
+      <b>6.</b> Bahan buatan sendiri lewat Produksi, bukan Barang Datang
     </p>
 
     <h3 style="color:#c2410c">Kalau bingung</h3>

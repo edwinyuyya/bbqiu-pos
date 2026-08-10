@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import PinGate from '../components/PinGate';
-import BarcodeScanner from './BarcodeScanner';
 import SupplierField from './SupplierField';
-import ProduksiBatch from './ProduksiBatch';
+import Produksi from './Produksi';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 // Satuan terkecil didahulukan (gram, ml, pcs, sachet, porsi, botol)
@@ -46,7 +45,7 @@ function StokInner() {
         <button className={`btn ${tab === 'opname' ? 'btn-brand' : ''}`} onClick={() => setTab('opname')}>🧮 Opname Massal</button>
         <button className={`btn ${tab === 'add' ? 'btn-brand' : ''}`} onClick={() => setTab('add')}>+ Barang</button>
         <button className={`btn ${tab === 'supplier' ? 'btn-brand' : ''}`} onClick={() => setTab('supplier')}>🚚 Supplier</button>
-        <button className={`btn ${tab === 'batch' ? 'btn-brand' : ''}`} onClick={() => setTab('batch')}>🏷️ Produksi & Batch</button>
+        <button className={`btn ${tab === 'produksi' ? 'btn-brand' : ''}`} onClick={() => setTab('produksi')}>🍳 Produksi</button>
       </div>
 
       {loading ? <p className="muted">Memuat…</p> : (
@@ -56,7 +55,7 @@ function StokInner() {
           {tab === 'opname' && <OpnameMassal items={items} reload={load} />}
           {tab === 'add' && <AddItem reload={load} onDone={() => setTab('stock')} suppliers={suppliers} />}
           {tab === 'supplier' && <SupplierTab suppliers={suppliers} reload={loadSuppliers} />}
-          {tab === 'batch' && <ProduksiBatch items={items} suppliers={suppliers} reload={load} />}
+          {tab === 'produksi' && <Produksi items={items} reload={load} />}
         </>
       )}
     </div>
@@ -68,7 +67,6 @@ function Receive({ items, reload }) {
   const [q, setQ] = useState('');
   const [cart, setCart] = useState({}); // id -> qty
   const [exp, setExp] = useState({});   // id -> tanggal kadaluarsa (opsional)
-  const [scan, setScan] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -84,13 +82,6 @@ function Receive({ items, reload }) {
   const setQty = (id, v) => setCart((c) => {
     const n = Math.max(0, Number(v) || 0); const copy = { ...c }; if (n === 0) delete copy[id]; else copy[id] = n; return copy;
   });
-
-  function onScan(code) {
-    setScan(false);
-    const it = items.find((i) => i.barcode && String(i.barcode) === String(code));
-    if (it) { add(it.id, 1); setMsg(`+1 ${it.name}`); setTimeout(() => setMsg(''), 1500); }
-    else { setQ(code); setMsg('Barcode belum terdaftar. Cari/daftarkan di Daftar Stok.'); setTimeout(() => setMsg(''), 3000); }
-  }
 
   const lines = Object.entries(cart).filter(([, v]) => v > 0);
   const totalQty = lines.reduce((s, [, v]) => s + Number(v), 0);
@@ -108,15 +99,12 @@ function Receive({ items, reload }) {
     <div className="col" style={{ paddingBottom: 90 }}>
       <div className="card" style={{ padding: '8px 12px', borderColor: 'var(--brand)' }}>
         <p className="muted small" style={{ margin: 0 }}>
-          Tab ini cuma update angka stok, <b>tidak ada cetak label/barcode</b>. Untuk
-          bahan yang perlu label FIFO (daging gelondongan, hasil produksi bumbu),
-          pakai tab <b>🏷️ Produksi & Batch</b> di atas.
+          Catat barang <b>mentah</b> yang baru datang di sini. Untuk bahan yang
+          dibuat sendiri dari bahan lain (mis. daging diiris jadi porsi), pakai
+          tab <b>🍳 Produksi</b> supaya bahan mentahnya ikut berkurang.
         </p>
       </div>
-      <div className="row">
-        <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button className="btn" onClick={() => setScan(true)}>📷 Scan</button>
-      </div>
+      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
       {msg && <div className="card" style={{ padding: '8px 12px' }}><span className="small">{msg}</span></div>}
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))' }}>
@@ -167,7 +155,6 @@ function Receive({ items, reload }) {
         </div>
       )}
 
-      {scan && <BarcodeScanner onDetected={onScan} onClose={() => setScan(false)} />}
     </div>
   );
 }
@@ -260,7 +247,6 @@ function StockList({ items, reload, suppliers }) {
                   {it.supplier ? ` · ${it.supplier}` : ''}
                   {it.supplier && it.supplier_verified === false ? ' 🔶dadakan' : ''}
                   {it.invoice_no ? ` (Nota: ${it.invoice_no})` : ''}
-                  {it.barcode ? ` · 🏷️${it.barcode}` : ''}
                 </div>
               </div>
               <span className={`badge ${low ? 'badge-red' : 'badge-green'}`}>{Number(it.stock_qty)} {it.unit}</span>
@@ -295,7 +281,7 @@ function EditModal({ item, onClose, reload, suppliers }) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: f.name, unit: f.unit, category: f.category, min_stock: f.min_stock, cost_price: f.cost_price,
-        supplier: f.supplier, barcode: f.barcode, expiry_date: f.expiry_date || '', shelf_life_days: f.shelf_life_days ?? '',
+        supplier: f.supplier, expiry_date: f.expiry_date || '', shelf_life_days: f.shelf_life_days ?? '',
         supplier_verified: !isCustom, invoice_no: isCustom ? f.invoice_no : '',
       }),
     });
@@ -320,7 +306,6 @@ function EditModal({ item, onClose, reload, suppliers }) {
             onChangeSupplier={(v) => setF({ ...f, supplier: v })}
             onChangeInvoice={(v) => setF({ ...f, invoice_no: v })}
           />
-          <input className="input" placeholder="Barcode (opsional)" value={f.barcode || ''} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
           <div className="row">
             <label className="muted small" style={{ flex: 1 }}>Tanggal kadaluarsa<input className="input" type="date" value={f.expiry_date ? String(f.expiry_date).slice(0, 10) : ''} onChange={(e) => setF({ ...f, expiry_date: e.target.value })} /></label>
             <label className="muted small" style={{ flex: 1 }}>Masa simpan (hari)<input className="input" type="number" placeholder="auto" value={f.shelf_life_days ?? ''} onChange={(e) => setF({ ...f, shelf_life_days: e.target.value })} /></label>
@@ -338,9 +323,8 @@ function EditModal({ item, onClose, reload, suppliers }) {
 
 /* ---------- Tambah Barang ---------- */
 function AddItem({ reload, onDone, suppliers }) {
-  const [f, setF] = useState({ name: '', unit: 'pcs', category: '', stock_qty: '', min_stock: '', cost_price: '', supplier: '', invoice_no: '', barcode: '', expiry_date: '' });
+  const [f, setF] = useState({ name: '', unit: 'pcs', category: '', stock_qty: '', min_stock: '', cost_price: '', supplier: '', invoice_no: '', expiry_date: '' });
   const [busy, setBusy] = useState(false);
-  const [scan, setScan] = useState(false);
   const names = (suppliers || []).map((s) => s.name);
   const isCustom = f.supplier && f.supplier.trim() && !names.some((n) => n.toLowerCase() === f.supplier.trim().toLowerCase());
   async function save() {
@@ -369,16 +353,11 @@ function AddItem({ reload, onDone, suppliers }) {
           onChangeSupplier={(v) => setF({ ...f, supplier: v })}
           onChangeInvoice={(v) => setF({ ...f, invoice_no: v })}
         />
-        <div className="row">
-          <input className="input" placeholder="Barcode (opsional)" value={f.barcode} onChange={(e) => setF({ ...f, barcode: e.target.value })} />
-          <button className="btn" onClick={() => setScan(true)}>📷</button>
-        </div>
         <label className="muted small">Tanggal kadaluarsa (opsional)
           <input className="input" type="date" value={f.expiry_date} onChange={(e) => setF({ ...f, expiry_date: e.target.value })} />
         </label>
       </div>
       <button className="btn btn-brand btn-block" style={{ marginTop: 12 }} disabled={busy} onClick={save}>{busy ? 'Menyimpan…' : 'Simpan Barang'}</button>
-      {scan && <BarcodeScanner onDetected={(c) => { setF((x) => ({ ...x, barcode: c })); setScan(false); }} onClose={() => setScan(false)} />}
     </div>
   );
 }

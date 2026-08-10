@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
+import CariBox from '../components/CariBox';
 import TakeOrder from './TakeOrder';
 import OmzetTab from './OmzetTab';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
+import { cocok } from '../../lib/cari';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
 function beep(ctx) {
@@ -53,6 +55,25 @@ function jamWIB(iso) {
     return new Date(iso).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch { return ''; }
 }
+function tanggalWIB(iso) {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+}
+// Tanggal nota. "Hari ini"/"Kemarin" dibedakan karena itu yang paling sering
+// ditanyakan; nota lebih lama ditulis tanggalnya lengkap supaya tidak keliru
+// saat mencocokkan dengan setoran.
+function tanggalNota(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const jam = d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+    const tgl = tanggalWIB(iso);
+    const hariIni = tanggalWIB(Date.now());
+    const kemarin = tanggalWIB(Date.now() - 86400000);
+    if (tgl === hariIni) return `Hari ini ${jam}`;
+    if (tgl === kemarin) return `Kemarin ${jam}`;
+    return `${d.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric' })} · ${jam}`;
+  } catch { return ''; }
+}
 // Kompres foto nota (dari file/kamera) jadi data URL kecil.
 function compressReceipt(file, maxW = 640) {
   return new Promise((resolve, reject) => {
@@ -81,6 +102,7 @@ function CashierPage() {
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState({});
   const [tab, setTab] = useState('active'); // active | closed
+  const [cariBill, setCariBill] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
@@ -291,6 +313,13 @@ function CashierPage() {
     if (fn) await fn(photo);
   }
 
+  // Nomor nota, meja, nama pemesan, dan isi pesanannya — tamu biasanya ingat
+  // salah satu dari itu, bukan nomor notanya.
+  const billTersaring = useMemo(() => orders.filter((o) => cocok([
+    `#${o.order_no}`, String(o.order_no), o.table_number, o.customer_name,
+    (items[o.id] || []).map((it) => it.name).join(' '),
+  ], cariBill)), [orders, items, cariBill]);
+
   return (
     <div className="container">
       <div className="between" style={{ padding: '16px 0' }}>
@@ -348,18 +377,30 @@ function CashierPage() {
         <button className={`btn ${tab === 'closed' ? 'btn-brand' : ''}`} onClick={() => setTab('closed')}>Selesai</button>
       </div>
 
+      <CariBox
+        value={cariBill} onChange={setCariBill}
+        placeholder="Cari nota (no. bill, meja, nama, isi pesanan)…"
+        hasil={billTersaring.length} total={orders.length}
+        style={{ marginBottom: 12 }}
+      />
+
       {loading && <p className="muted">Memuat…</p>}
-      {!loading && orders.length === 0 && (
-        <div className="card"><p className="muted" style={{ margin: 0 }}>Tidak ada data.</p></div>
+      {!loading && billTersaring.length === 0 && (
+        <div className="card"><p className="muted" style={{ margin: 0 }}>
+          {orders.length === 0 ? 'Tidak ada data.' : 'Tidak ada nota yang cocok.'}
+        </p></div>
       )}
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))' }}>
-        {orders.map((o) => {
+        {billTersaring.map((o) => {
           const paid = o.payment_status === 'paid';
           return (
             <div key={o.id} className="card">
               <div className="between">
-                <div className="bold">#{o.order_no} · Meja {o.table_number}</div>
+                <div>
+                  <div className="bold">#{o.order_no} · Meja {o.table_number}</div>
+                  <div className="muted small">🕒 {tanggalNota(o.created_at)}</div>
+                </div>
                 <span className={`badge ${paid ? 'badge-green' : 'badge-amber'}`}>
                   {paid ? 'Lunas' : 'Belum bayar'}
                 </span>

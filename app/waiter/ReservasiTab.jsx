@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { STATUS, STATUS_LABEL, hariIniWIB, jamRapi, tanggalRapi } from '../../lib/reservation';
 import { linkWA } from '../../lib/wa';
+import CariBox from '../components/CariBox';
+import { cocok } from '../../lib/cari';
 
 const MERCHANT = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'BBQIU';
 
@@ -19,6 +21,14 @@ export default function ReservasiTab({ reservations, tables, mejaTerpakai, reloa
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [pilihMeja, setPilihMeja] = useState({});
+  const [q, setQ] = useState('');
+
+  const tersaring = useMemo(
+    () => reservations.filter((r) => cocok(
+      [r.customer_name, r.phone, r.reserved_date, r.note], q,
+    )),
+    [reservations, q],
+  );
 
   const tableById = useMemo(
     () => Object.fromEntries(tables.map((t) => [t.id, t])),
@@ -126,11 +136,19 @@ export default function ReservasiTab({ reservations, tables, mejaTerpakai, reloa
         </button>
       </div>
 
-      {reservations.length === 0 && (
-        <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada reservasi.</p></div>
+      <CariBox
+        value={q} onChange={setQ}
+        placeholder="Cari reservasi (nama, no. HP, tanggal)…"
+        hasil={tersaring.length} total={reservations.length}
+      />
+
+      {tersaring.length === 0 && (
+        <div className="card"><p className="muted" style={{ margin: 0 }}>
+          {reservations.length === 0 ? 'Belum ada reservasi.' : 'Tidak ada reservasi yang cocok.'}
+        </p></div>
       )}
 
-      {reservations.map((r) => {
+      {tersaring.map((r) => {
         const link = origin ? `${origin}/reservasi/${r.token}` : '';
         const meja = r.table_id ? tableById[r.table_id] : null;
         const pra = (r.orders || []).find((o) => o.status === 'scheduled');

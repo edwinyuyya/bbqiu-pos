@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import CariBox from '../components/CariBox';
+import { cocok } from '../../lib/cari';
 
 const AREAS = ['Outdoor', 'Ruang AC', 'VIP'];
 
@@ -16,6 +18,7 @@ export default function TablesTab({ tables, origin, reload }) {
   const [area, setArea] = useState('');
   const [seats, setSeats] = useState('');
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
 
   async function addTable() {
     if (!num.trim()) return;
@@ -42,11 +45,15 @@ export default function TablesTab({ tables, origin, reload }) {
 
   const belumIsiKursi = tables.filter((t) => t.seats == null).length;
 
+  const tersaring = useMemo(
+    () => tables.filter((t) => cocok([t.table_number, t.area], q)),
+    [tables, q],
+  );
   const grouped = useMemo(() => {
     const byArea = {};
-    for (const t of tables) (byArea[t.area || 'Tanpa area'] ||= []).push(t);
+    for (const t of tersaring) (byArea[t.area || 'Tanpa area'] ||= []).push(t);
     return Object.entries(byArea);
-  }, [tables]);
+  }, [tersaring]);
   async function toggle(t) {
     await supabase.from('tables').update({ active: !t.active }).eq('id', t.id);
     reload();
@@ -96,6 +103,12 @@ export default function TablesTab({ tables, origin, reload }) {
           </Link>
         </div>
       )}
+
+      <CariBox
+        value={q} onChange={setQ}
+        placeholder="Cari meja (nomor atau area)…"
+        hasil={tersaring.length} total={tables.length}
+      />
 
       {grouped.map(([areaName, list]) => (
         <div key={areaName} className="col">

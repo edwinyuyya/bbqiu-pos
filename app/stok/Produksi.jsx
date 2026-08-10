@@ -1,8 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import PilihCari from '../components/PilihCari';
 
 function angka(n) { return Number(n || 0).toLocaleString('id-ID'); }
+
+// Daftar bahan panjang — semua pemilihannya pakai dropdown yang bisa diketik.
+function opsiBahan(items) {
+  return (items || []).map((i) => ({
+    id: i.id,
+    label: i.name,
+    sub: `${i.unit}${i.category ? ` · ${i.category}` : ''}`,
+  }));
+}
 
 // Produksi = mengubah bahan mentah jadi bahan siap pakai.
 // Contoh: daging gelondongan diiris jadi porsi karubi.
@@ -111,13 +121,12 @@ function CatatProduksi({ items, reload }) {
         <div className="h2" style={{ marginBottom: 10 }}>Catat Hasil Produksi</div>
 
         <label className="muted small">Bahan yang dihasilkan</label>
-        <select className="select" style={{ marginTop: 4 }} value={outputId}
-          onChange={(e) => setOutputId(e.target.value)}>
-          <option value="">— Pilih bahan hasil produksi —</option>
-          {items.map((i) => (
-            <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
-          ))}
-        </select>
+        <PilihCari
+          style={{ marginTop: 4 }}
+          options={opsiBahan(items)}
+          value={outputId} onChange={setOutputId}
+          placeholder="Cari bahan hasil produksi…"
+        />
 
         {outputId && menus.length > 0 && (
           <div className="row" style={{ marginTop: 12, flexWrap: 'wrap' }}>
@@ -131,15 +140,15 @@ function CatatProduksi({ items, reload }) {
         {outputId && cara === 'porsi' && menus.length > 0 && (
           <>
             <label className="muted small" style={{ display: 'block', marginTop: 12 }}>Menu yang diproduksi</label>
-            <select className="select" style={{ marginTop: 4 }} value={menuId}
-              onChange={(e) => setMenuId(e.target.value)}>
-              <option value="">— Pilih menu —</option>
-              {menus.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} · {angka(m.per_porsi)} {output?.unit}/porsi
-                </option>
-              ))}
-            </select>
+            <PilihCari
+              style={{ marginTop: 4 }}
+              options={menus.map((m) => ({
+                id: m.id, label: m.name,
+                sub: `${angka(m.per_porsi)} ${output?.unit}/porsi`,
+              }))}
+              value={menuId} onChange={setMenuId}
+              placeholder="Cari menu…"
+            />
 
             <label className="muted small" style={{ display: 'block', marginTop: 12 }}>Jumlah porsi</label>
             <input className="input" style={{ marginTop: 4 }} inputMode="decimal"
@@ -300,11 +309,12 @@ function AturResep({ items }) {
         </p>
 
         <label className="muted small">Bahan hasil produksi</label>
-        <select className="select" style={{ marginTop: 4 }} value={outputId}
-          onChange={(e) => setOutputId(e.target.value)}>
-          <option value="">— Pilih bahan hasil —</option>
-          {items.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
-        </select>
+        <PilihCari
+          style={{ marginTop: 4 }}
+          options={opsiBahan(items)}
+          value={outputId} onChange={setOutputId}
+          placeholder="Cari bahan hasil…"
+        />
 
         {outputId && (
           <>
@@ -331,12 +341,12 @@ function AturResep({ items }) {
             </div>
 
             <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-              <select className="select" style={{ flex: 2, minWidth: 180 }} value={inputId}
-                onChange={(e) => setInputId(e.target.value)}>
-                <option value="">— Bahan mentah —</option>
-                {items.filter((i) => i.id !== outputId)
-                  .map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
-              </select>
+              <PilihCari
+                style={{ flex: 2, minWidth: 180 }}
+                options={opsiBahan(items.filter((i) => i.id !== outputId))}
+                value={inputId} onChange={setInputId}
+                placeholder="Cari bahan mentah…"
+              />
               <input className="input" style={{ maxWidth: 120 }} inputMode="decimal"
                 placeholder="Takaran" value={qty} onChange={(e) => setQty(e.target.value)} />
               <button className="btn btn-brand" disabled={busy} onClick={tambah}>Tambah</button>

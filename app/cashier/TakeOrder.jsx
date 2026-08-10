@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
+import { cocok } from '../../lib/cari';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -55,11 +56,10 @@ export default function TakeOrder({ onCreated }) {
 
   // Pencarian menu. Menu sudah 121 item, menggulir kategori satu per satu
   // terlalu lambat saat kasir sedang antre.
-  const cocokCari = useMemo(() => {
-    const q = cari.trim().toLowerCase();
-    if (!q) return menuItems;
-    return menuItems.filter((i) => i.name.toLowerCase().includes(q));
-  }, [menuItems, cari]);
+  const cocokCari = useMemo(
+    () => menuItems.filter((i) => cocok([i.name, i.description], cari)),
+    [menuItems, cari],
+  );
 
   const grouped = useMemo(() => {
     const byCat = categories.map((c) => ({ ...c, items: cocokCari.filter((i) => i.category_id === c.id) }));

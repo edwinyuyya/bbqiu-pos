@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { SCOPE, SCOPE_LABEL, cekPromo, ringkasLingkup, hariIniWIB } from '../../lib/promo';
+import CariBox from '../components/CariBox';
+import { cocok } from '../../lib/cari';
 
 const KOSONG = {
   code: '', name: '', percent: '', scope: SCOPE.ALL,
@@ -13,6 +15,12 @@ export default function PromoTab({ promos, categories, reload }) {
   const [form, setForm] = useState(KOSONG);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+
+  const tersaring = useMemo(
+    () => promos.filter((p) => cocok([p.code, p.name], q)),
+    [promos, q],
+  );
 
   const namaKategori = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
@@ -128,11 +136,19 @@ export default function PromoTab({ promos, categories, reload }) {
         </button>
       </div>
 
-      {promos.length === 0 && (
-        <div className="card"><p className="muted" style={{ margin: 0 }}>Belum ada kode promo.</p></div>
+      <CariBox
+        value={q} onChange={setQ}
+        placeholder="Cari kode promo…"
+        hasil={tersaring.length} total={promos.length}
+      />
+
+      {tersaring.length === 0 && (
+        <div className="card"><p className="muted" style={{ margin: 0 }}>
+          {promos.length === 0 ? 'Belum ada kode promo.' : 'Tidak ada promo yang cocok.'}
+        </p></div>
       )}
 
-      {promos.map((p) => {
+      {tersaring.map((p) => {
         const sah = cekPromo(p, hariIni);
         return (
           <div key={p.id} className="card">

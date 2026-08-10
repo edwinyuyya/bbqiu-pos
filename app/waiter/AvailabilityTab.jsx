@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { cocok } from '../../lib/cari';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
@@ -47,11 +48,10 @@ export default function AvailabilityTab({ items, reload }) {
     reload();
   }
 
-  const hasil = useMemo(() => {
-    const q = cari.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((it) => it.name.toLowerCase().includes(q));
-  }, [items, cari]);
+  const hasil = useMemo(
+    () => items.filter((it) => cocok(it.name, cari)),
+    [items, cari],
+  );
 
   // Semua menu berhitung nol = stok gudang belum diisi sama sekali.
   const stokBelumDiinput = useMemo(

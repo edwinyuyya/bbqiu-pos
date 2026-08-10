@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CallWaiterButton from '../../components/CallWaiterButton';
+import { cocok } from '../../../lib/cari';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -45,17 +46,12 @@ export default function MenuClient({
 
   // Pencarian menu. Daftar menu sudah 121 item — menggulir sampai ketemu
   // terlalu lama, apalagi di HP.
-  const hasilCari = useMemo(() => {
-    const q = cari.trim().toLowerCase();
-    if (!q) return items;
-    // Ikut mencari di deskripsi, supaya "pedas" atau "jumbo" tetap ketemu
-    // walau tidak ada di nama menunya.
-    return items.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        (i.description || '').toLowerCase().includes(q)
-    );
-  }, [items, cari]);
+  // Ikut mencari di deskripsi, supaya "pedas" atau "jumbo" tetap ketemu
+  // walau tidak ada di nama menunya.
+  const hasilCari = useMemo(
+    () => items.filter((i) => cocok([i.name, i.description], cari)),
+    [items, cari],
+  );
 
   const grouped = useMemo(() => {
     const byCat = categories.map((c) => ({

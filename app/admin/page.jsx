@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import AlertsPanel from '../components/AlertsPanel';
+import CariBox from '../components/CariBox';
+import PilihCari from '../components/PilihCari';
 import TablesTab from './TablesTab';
 import PromoTab from './PromoTab';
+import { cocok } from '../../lib/cari';
 
 function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -105,8 +108,16 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY);
   const [recipeFor, setRecipeFor] = useState(null); // menu item yang sedang dibuka resepnya
+  const [q, setQ] = useState('');
 
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
+
+  // Daftar menu sudah 90-an baris; tanpa pencarian, mengubah harga satu menu
+  // berarti menggulir sampai ketemu.
+  const tersaring = useMemo(
+    () => items.filter((it) => cocok([it.name, it.description, catById[it.category_id]?.name], q)),
+    [items, q, catById],
+  );
 
   async function pickImage(file, setState) {
     if (!file) return;
@@ -234,8 +245,21 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
         <button className="btn btn-brand" style={{ marginTop: 10 }} disabled={busy} onClick={addItem}>Tambah Menu</button>
       </div>
 
+      <CariBox
+        value={q} onChange={setQ}
+        placeholder="Cari menu (nama, kategori, deskripsi)…"
+        hasil={tersaring.length} total={items.length}
+      />
+
       <div className="col">
-        {items.map((it) => (
+        {tersaring.length === 0 && (
+          <div className="card">
+            <p className="muted" style={{ margin: 0 }}>
+              {items.length === 0 ? 'Belum ada menu.' : 'Tidak ada menu yang cocok.'}
+            </p>
+          </div>
+        )}
+        {tersaring.map((it) => (
           <div key={it.id} className="card">
             {editId === it.id ? (
               <div className="col">
@@ -410,10 +434,13 @@ function RecipeEditor({ menuItem, inventory }) {
             </div>
           )}
           <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-            <select className="select" style={{ flex: 1, minWidth: 160 }} value={invId} onChange={(e) => setInvId(e.target.value)}>
-              <option value="">— Pilih bahan —</option>
-              {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
-            </select>
+            <PilihCari
+              style={{ flex: 1, minWidth: 180 }}
+              options={inventory.map((i) => ({ id: i.id, label: i.name, sub: i.unit }))}
+              value={invId} onChange={setInvId}
+              placeholder="Cari bahan…"
+              kosong="Bahan tidak ada. Tambahkan dulu di Stok → + Barang."
+            />
             <input className="input" type="number" style={{ width: 90 }} placeholder="Qty" value={qty} onChange={(e) => setQty(e.target.value)} />
             <span className="muted small" style={{ alignSelf: 'center' }}>{invId ? invById[invId]?.unit : ''}</span>
             <button className="btn btn-brand" disabled={busy} onClick={add}>Tambah</button>

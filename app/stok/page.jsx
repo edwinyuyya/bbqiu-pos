@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import PinGate from '../components/PinGate';
+import CariBox from '../components/CariBox';
 import SupplierField from './SupplierField';
 import Produksi from './Produksi';
+import { cocok } from '../../lib/cari';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 // Satuan terkecil didahulukan (gram, ml, pcs, sachet, porsi, botol)
@@ -70,10 +72,10 @@ function Receive({ items, reload }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return items.filter((i) => !s || i.name.toLowerCase().includes(s) || (i.category || '').toLowerCase().includes(s));
-  }, [items, q]);
+  const filtered = useMemo(
+    () => items.filter((i) => cocok([i.name, i.category, i.supplier], q)),
+    [items, q],
+  );
 
   const add = (id, d) => setCart((c) => {
     const n = Math.max(0, (Number(c[id]) || 0) + d);
@@ -104,7 +106,8 @@ function Receive({ items, reload }) {
           tab <b>🍳 Produksi</b> supaya bahan mentahnya ikut berkurang.
         </p>
       </div>
-      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <CariBox value={q} onChange={setQ} placeholder="Cari barang (nama, kategori, supplier)…"
+        hasil={filtered.length} total={items.length} />
       {msg && <div className="card" style={{ padding: '8px 12px' }}><span className="small">{msg}</span></div>}
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))' }}>
@@ -227,13 +230,14 @@ function StockList({ items, reload, suppliers }) {
     await fetch(`/api/inventory/${it.id}`, { method: 'DELETE' });
     reload();
   }
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return items.filter((i) => !s || i.name.toLowerCase().includes(s) || (i.category || '').toLowerCase().includes(s));
-  }, [items, q]);
+  const filtered = useMemo(
+    () => items.filter((i) => cocok([i.name, i.category, i.supplier], q)),
+    [items, q],
+  );
   return (
     <div className="col">
-      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <CariBox value={q} onChange={setQ} placeholder="Cari barang (nama, kategori, supplier)…"
+        hasil={filtered.length} total={items.length} />
       {filtered.map((it) => {
         const low = Number(it.stock_qty) <= Number(it.min_stock);
         return (
@@ -369,10 +373,10 @@ function OpnameMassal({ items, reload }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return items.filter((i) => !s || i.name.toLowerCase().includes(s) || (i.category || '').toLowerCase().includes(s));
-  }, [items, q]);
+  const filtered = useMemo(
+    () => items.filter((i) => cocok([i.name, i.category, i.supplier], q)),
+    [items, q],
+  );
 
   const rows = Object.entries(counts).filter(([, v]) => v !== '' && v != null);
 
@@ -395,7 +399,8 @@ function OpnameMassal({ items, reload }) {
           Stok akan <b>di-set</b> sesuai angka yang kamu isi (untuk opname besar/tutup buku).
         </p>
       </div>
-      <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <CariBox value={q} onChange={setQ} placeholder="Cari barang (nama, kategori, supplier)…"
+        hasil={filtered.length} total={items.length} />
       {msg && <div className="card" style={{ padding: '8px 12px' }}><span className="small">{msg}</span></div>}
 
       <div className="col">

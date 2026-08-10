@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
 import TakeOrder from './TakeOrder';
+import OmzetTab from './OmzetTab';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -325,7 +326,8 @@ function CashierPage() {
       <div className="row" style={{ marginBottom: 14 }}>
         <button className={`btn ${mainTab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setMainTab('bill')}>🧾 Bill</button>
         <button className={`btn ${mainTab === 'takeorder' ? 'btn-brand' : ''}`} onClick={() => setMainTab('takeorder')}>➕ Input Order</button>
-        <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Petty Cash</button>
+        <button className={`btn ${mainTab === 'omzet' ? 'btn-brand' : ''}`} onClick={() => setMainTab('omzet')}>📊 Omzet &amp; Biaya</button>
+        <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Pengeluaran</button>
       </div>
 
       <FaceCapture
@@ -335,6 +337,7 @@ function CashierPage() {
         onCancel={() => setCap(null)}
       />
 
+      {mainTab === 'omzet' && <OmzetTab />}
       {mainTab === 'pettycash' && <PettyCashTab />}
       {mainTab === 'takeorder' && <TakeOrder onCreated={() => setMainTab('bill')} />}
 
@@ -506,7 +509,7 @@ function PettyCashTab() {
   const [balance, setBalance] = useState(0);
   const [txs, setTxs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ type: 'out', amount: '', note: '', created_by: '' });
+  const [form, setForm] = useState({ type: 'out', amount: '', note: '', created_by: '', category: '' });
   const [photo, setPhoto] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -528,14 +531,18 @@ function PettyCashTab() {
   async function submit() {
     const amount = Number(form.amount);
     if (!amount || amount <= 0) { alert('Nominal wajib diisi.'); return; }
-    if (form.type === 'out' && !photo) { alert('Foto nota wajib untuk pengeluaran.'); return; }
+    // Foto hanya diwajibkan untuk nominal besar. Memaksa foto untuk uang
+    // parkir Rp 2.000 hanya membuat staf malas mencatat sama sekali.
+    if (form.type === 'out' && !photo && amount >= 50000) {
+      alert('Foto nota wajib untuk pengeluaran Rp 50.000 ke atas.'); return;
+    }
     setSaving(true);
     const r = await fetch('/api/petty-cash', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, amount, photo }),
     });
     if (r.ok) {
-      setForm({ type: form.type, amount: '', note: '', created_by: form.created_by });
+      setForm({ type: form.type, amount: '', note: '', created_by: form.created_by, category: form.category });
       setPhoto('');
       setMsg('Tersimpan ✓');
       await load();
@@ -569,13 +576,30 @@ function PettyCashTab() {
           </label>
         </div>
         <input className="input" style={{ marginTop: 8 }} type="number" placeholder="Nominal (Rp)" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+        {form.type === 'out' && (
+          <>
+            <div className="muted small" style={{ marginTop: 10 }}>Jenis pengeluaran</div>
+            <div className="opt-row" style={{ marginTop: 4 }}>
+              {['Listrik', 'Gas', 'Air', 'Parkir', 'Bensin', 'Belanja dapur', 'Kebersihan', 'Lainnya'].map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={`chip ${form.category === k ? 'chip-on' : ''}`}
+                  onClick={() => setForm({ ...form, category: form.category === k ? '' : k })}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <input className="input" style={{ marginTop: 8 }} placeholder="Catatan (mis. beli es batu)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
         <input className="input" style={{ marginTop: 8 }} placeholder="Nama petugas" value={form.created_by} onChange={(e) => setForm({ ...form, created_by: e.target.value })} />
 
         {form.type === 'out' && (
           <div className="row" style={{ marginTop: 8, alignItems: 'center' }}>
             <label className="btn" style={{ cursor: 'pointer' }}>
-              📷 Foto Nota (wajib)
+              📷 Foto Nota {Number(form.amount) >= 50000 ? '(wajib)' : '(opsional)'}
               <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => pickPhoto(e.target.files?.[0])} />
             </label>
             {photo && (

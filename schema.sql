@@ -340,10 +340,12 @@ create table if not exists petty_cash (
   type        text not null,             -- 'in' (isi ulang) | 'out' (pengeluaran)
   amount      numeric not null,
   note        text,
-  photo       text,                       -- foto nota bukti (wajib utk 'out')
+  photo       text,                       -- foto nota; wajib di atas Rp 50.000
+  category    text,                       -- Listrik/Gas/Parkir/Bensin/... utk rekap
   created_by  text,
   created_at  timestamptz default now()
 );
+alter table petty_cash add column if not exists category text;
 create index if not exists idx_pettycash_date on petty_cash(created_at);
 
 alter table petty_cash enable row level security;
@@ -562,4 +564,42 @@ alter table production_recipes enable row level security;
 drop policy if exists "allow all production_recipes" on production_recipes;
 create policy "allow all production_recipes" on production_recipes for all using (true) with check (true);
 grant select, insert, update, delete on production_recipes to anon, authenticated;
+notify pgrst, 'reload schema';
+
+-- ============================================================
+--  BIAYA TETAP BULANAN + SETTINGS
+-- ============================================================
+-- Gaji, sewa, langganan: nilainya per BULAN. Beban hariannya dihitung
+-- total ÷ hari buka per bulan, lalu ditambahkan ke pengeluaran operasional
+-- hari itu supaya kasir langsung tahu total biaya harian.
+-- Angka gaji sensitif: dikelola dari halaman Owner, kasir hanya melihat
+-- totalnya per hari — bukan rincian per orang.
+create table if not exists fixed_costs (
+  id             uuid default gen_random_uuid() primary key,
+  name           text not null,           -- 'Gaji koki', 'Sewa tempat'
+  amount_monthly numeric not null,
+  note           text,
+  active         boolean default true,    -- dinonaktifkan, bukan dihapus,
+                                          -- supaya riwayat tetap terbaca
+  created_at     timestamptz default now()
+);
+
+alter table fixed_costs enable row level security;
+drop policy if exists "allow all fixed_costs" on fixed_costs;
+create policy "allow all fixed_costs" on fixed_costs for all using (true) with check (true);
+
+-- Penyimpanan konfigurasi sederhana key/value.
+create table if not exists settings (
+  key        text primary key,
+  value      text,
+  updated_at timestamptz default now()
+);
+insert into settings (key, value) values ('hari_buka_per_bulan', '30')
+  on conflict (key) do nothing;
+
+alter table settings enable row level security;
+drop policy if exists "allow all settings" on settings;
+create policy "allow all settings" on settings for all using (true) with check (true);
+
+grant select, insert, update, delete on fixed_costs, settings to anon, authenticated;
 notify pgrst, 'reload schema';

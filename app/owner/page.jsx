@@ -5,6 +5,7 @@ import Link from 'next/link';
 import PinGate from '../components/PinGate';
 import AlertsPanel from '../components/AlertsPanel';
 import { STATIONS } from '../../lib/stations';
+import BiayaTetap from './BiayaTetap';
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 function durasi(sec) {
@@ -82,6 +83,8 @@ function OwnerInner() {
           <p className="muted small" style={{ marginTop: -4, marginBottom: 4 }}>
             HPP &amp; margin dihitung dari resep menu × harga beli bahan terakhir — belum termasuk menu tanpa resep.
           </p>
+
+          <BiayaTetap />
 
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', marginTop: 12 }}>
             <div className="card">

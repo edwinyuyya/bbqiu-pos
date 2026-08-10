@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
@@ -17,6 +17,119 @@ import {
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
+// Menu tanpa foto tetap harus bisa dibedakan sekilas. Inisial di atas warna
+// yang tetap sama untuk nama yang sama membuat kasir hafal posisinya karena
+// bentuk dan warnanya, bukan karena membaca tiap kali.
+const WARNA = ['#c2410c', '#b45309', '#15803d', '#1d4ed8', '#7c2d12',
+  '#0f766e', '#9f1239', '#4d7c0f', '#6d28d9', '#a16207'];
+
+function inisial(nama) {
+  const kata = String(nama || '?').trim().split(/\s+/).filter(Boolean);
+  if (kata.length === 1) return kata[0].slice(0, 2).toUpperCase();
+  return (kata[0][0] + kata[1][0]).toUpperCase();
+}
+function warnaDari(nama) {
+  let h = 0;
+  for (const c of String(nama || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return WARNA[h % WARNA.length];
+}
+
+function Ubin({ item, jumlah, tanda, onKlik }) {
+  return (
+    <button className={`ubin ${jumlah > 0 ? 'dipilih' : ''}`} onClick={onKlik} title={item.name}>
+      <div className="ubin-gambar" style={{ background: warnaDari(item.name) }}>
+        {item.image_url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={item.image_url} alt={item.name} />
+          : inisial(item.name)}
+      </div>
+      <div className="ubin-teks">
+        <div className="ubin-nama">{item.name}</div>
+        <div className="ubin-harga">{rupiah(item.price)}</div>
+      </div>
+      {tanda && <span className="ubin-tanda">{tanda}</span>}
+      {jumlah > 0 && <span className="ubin-jumlah">{jumlah}</span>}
+    </button>
+  );
+}
+
+// Menu yang wajib pilih varian tidak bisa ditambahkan dengan satu ketukan —
+// pilihannya ditanyakan dulu di jendela ini, lalu langsung masuk keranjang.
+function PilihVarian({ item, onTambah, onTutup }) {
+  const [method, setMethod] = useState(COOK_METHODS[0]?.id || '');
+  const [temp, setTemp] = useState(DRINK_TEMPS[0]?.id || '');
+  const [sweet, setSweet] = useState(SWEETNESS[1]?.id || SWEETNESS[0]?.id || '');
+  const [qty, setQty] = useState(1);
+
+  function tambah() {
+    onTambah(
+      item.needs_cook_method ? { method } : { temp, sweet },
+      qty,
+    );
+  }
+
+  return (
+    <div className="tirai" onClick={onTutup}>
+      <div className="card kotak" onClick={(e) => e.stopPropagation()}>
+        <div className="between">
+          <div>
+            <div className="h2">{item.name}</div>
+            <div className="muted small">{rupiah(item.price)}</div>
+          </div>
+          <button className="btn" onClick={onTutup}>✕</button>
+        </div>
+
+        <hr className="hr" />
+
+        {item.needs_cook_method && (
+          <>
+            <div className="muted small" style={{ marginBottom: 6 }}>Cara masak</div>
+            <div className="opt-row">
+              {COOK_METHODS.map((m) => (
+                <button key={m.id} className={`chip ${method === m.id ? 'chip-on' : ''}`}
+                  onClick={() => setMethod(m.id)}>{m.emoji} {m.label}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {item.needs_drink_option && (
+          <>
+            <div className="muted small" style={{ marginBottom: 6 }}>Suhu</div>
+            <div className="opt-row">
+              {DRINK_TEMPS.map((t) => (
+                <button key={t.id} className={`chip ${temp === t.id ? 'chip-on' : ''}`}
+                  onClick={() => setTemp(t.id)}>{t.emoji} {t.label}</button>
+              ))}
+            </div>
+            <div className="muted small" style={{ margin: '10px 0 6px' }}>Tingkat manis</div>
+            <div className="opt-row">
+              {SWEETNESS.map((s) => (
+                <button key={s.id} className={`chip ${sweet === s.id ? 'chip-on' : ''}`}
+                  onClick={() => setSweet(s.id)}>{s.label}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <hr className="hr" />
+        <div className="between">
+          <span className="muted small">Jumlah</span>
+          <div className="qty">
+            <button onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
+            <span className="bold" style={{ fontSize: 18 }}>{qty}</span>
+            <button onClick={() => setQty((q) => q + 1)}>+</button>
+          </div>
+        </div>
+
+        <button className="btn btn-brand btn-block" style={{ marginTop: 12 }} onClick={tambah}>
+          Tambah {qty} · {rupiah(item.price * qty)}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Kasir input order manual — untuk pelanggan yang tidak scan QR sendiri,
 // atau tambahan order ke meja yang sudah jalan. Pakai endpoint POST /api/orders
 // yang SAMA dengan yang dipakai halaman menu pelanggan (potong stok resep,
@@ -25,47 +138,74 @@ export default function TakeOrder({ onCreated }) {
   const [tables, setTables] = useState([]);
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [laris, setLaris] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [tableId, setTableId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [payment, setPayment] = useState('cashier');
-  const [cart, setCart] = useState({}); // cartKey -> qty
-  const [notes, setNotes] = useState({}); // cartKey -> note
-  // Pilihan es/panas + mondo/manis/tawar yang sedang aktif per menu minuman.
-  const [drinkOpt, setDrinkOpt] = useState({}); // menuId -> { temp, sweet }
+  const [cart, setCart] = useState({});   // cartKey -> qty
+  const [notes, setNotes] = useState({}); // cartKey -> catatan
+  const [varian, setVarian] = useState(null); // menu yang sedang ditanya variannya
+  const [kategoriAktif, setKategoriAktif] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState(null); // { order_id, order_no }
+  const [result, setResult] = useState(null);
   const [cari, setCari] = useState('');
 
   useEffect(() => {
     (async () => {
-      const [t, c, m] = await Promise.all([
+      const [t, c, m, l] = await Promise.all([
         supabase.from('tables').select('id, table_number, token, active').eq('active', true).order('table_number'),
         supabase.from('categories').select('*').order('sort_order'),
         supabase.from('menu_items').select('*').eq('available', true).order('sort_order'),
+        fetch('/api/menu/laris?hari=30&jumlah=12').then((r) => r.json()).catch(() => ({ laris: [] })),
       ]);
       setTables(t.data || []);
       setCategories(c.data || []);
       setMenuItems(m.data || []);
+      setLaris(l.laris || []);
       setLoading(false);
     })();
   }, []);
 
   const itemById = useMemo(() => Object.fromEntries(menuItems.map((i) => [i.id, i])), [menuItems]);
 
-  // Pencarian menu. Menu sudah 121 item, menggulir kategori satu per satu
-  // terlalu lambat saat kasir sedang antre.
   const cocokCari = useMemo(
     () => menuItems.filter((i) => cocok([i.name, i.description], cari)),
     [menuItems, cari],
   );
 
-  const grouped = useMemo(() => {
-    const byCat = categories.map((c) => ({ ...c, items: cocokCari.filter((i) => i.category_id === c.id) }));
-    return byCat.filter((c) => c.items.length);
-  }, [categories, cocokCari]);
+  // Menu laris hanya ditampilkan saat tidak sedang mencari atau menyaring
+  // kategori — begitu kasir mencari sesuatu, dia sudah tahu apa yang dicari.
+  const menuLaris = useMemo(() => {
+    if (cari.trim() || kategoriAktif) return [];
+    return laris.map((r) => itemById[r.menu_item_id]).filter(Boolean);
+  }, [laris, itemById, cari, kategoriAktif]);
+
+  const tampil = useMemo(() => {
+    let daftar = cocokCari;
+    if (kategoriAktif) daftar = daftar.filter((i) => i.category_id === kategoriAktif);
+    return daftar;
+  }, [cocokCari, kategoriAktif]);
+
+  const perKategori = useMemo(() => {
+    if (cari.trim() || kategoriAktif) return [{ id: '_', name: '', items: tampil }];
+    return categories
+      .map((c) => ({ ...c, items: tampil.filter((i) => i.category_id === c.id) }))
+      .filter((c) => c.items.length);
+  }, [categories, tampil, cari, kategoriAktif]);
+
+  // Berapa porsi menu ini di keranjang, digabung dari semua variannya.
+  const jumlahPerMenu = useMemo(() => {
+    const p = {};
+    for (const [k, q] of Object.entries(cart)) {
+      if (!(q > 0)) continue;
+      const { menuId } = parseCartKey(k);
+      p[menuId] = (p[menuId] || 0) + q;
+    }
+    return p;
+  }, [cart]);
 
   const cartLines = Object.entries(cart)
     .filter(([, q]) => q > 0)
@@ -74,13 +214,14 @@ export default function TakeOrder({ onCreated }) {
       return { key, item: itemById[menuId], method, temp, sweet, qty, note: notes[key] || '' };
     })
     .filter((l) => l.item);
+
   const subtotal = cartLines.reduce((s, l) => s + l.item.price * l.qty, 0);
   const pb1 = taxPercent();
   const tax = Math.round((subtotal * pb1) / 100);
   const total = subtotal + tax;
   const totalQty = cartLines.reduce((s, l) => s + l.qty, 0);
 
-  function setQty(key, delta) {
+  function ubahQty(key, delta) {
     setCart((c) => {
       const next = Math.max(0, (c[key] || 0) + delta);
       const copy = { ...c };
@@ -89,8 +230,20 @@ export default function TakeOrder({ onCreated }) {
     });
   }
 
+  // Satu ketukan pada ubin = satu porsi. Menu bervarian membuka jendela dulu.
+  function ketuk(item) {
+    if (item.needs_cook_method || item.needs_drink_option) { setVarian(item); return; }
+    ubahQty(cartKey(item.id), 1);
+  }
+
+  function tambahVarian(pilihan, qty) {
+    ubahQty(cartKey(varian.id, pilihan), qty);
+    setVarian(null);
+  }
+
   function reset() {
-    setCart({}); setNotes({}); setCustomerName(''); setTableId(''); setPayment('cashier'); setResult(null); setError('');
+    setCart({}); setNotes({}); setCustomerName(''); setTableId('');
+    setPayment('cashier'); setResult(null); setError(''); setCari(''); setKategoriAktif('');
   }
 
   async function submit() {
@@ -144,207 +297,179 @@ export default function TakeOrder({ onCreated }) {
   }
 
   return (
-    <div className="col">
-      <div className="card" style={{ maxWidth: 480 }}>
-        <div className="h2" style={{ marginBottom: 10 }}>Data Order</div>
-        <div className="col" style={{ gap: 8 }}>
-          <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
-            <option value="">— Pilih meja —</option>
-            {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
-          </select>
-          <input className="input" placeholder="Nama pelanggan (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-          <div className="row">
-            <label className={`btn ${payment === 'cashier' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
-              <input type="radio" style={{ display: 'none' }} checked={payment === 'cashier'} onChange={() => setPayment('cashier')} />
-              Bayar di Kasir
-            </label>
-            <label className={`btn ${payment === 'qris' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
-              <input type="radio" style={{ display: 'none' }} checked={payment === 'qris'} onChange={() => setPayment('qris')} />
-              QRIS
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ position: 'sticky', top: 0, zIndex: 6 }}>
-        <input
-          className="input"
-          type="search"
-          placeholder="Cari menu… (mis. karubi, teh, sate)"
-          value={cari}
-          onChange={(e) => setCari(e.target.value)}
-        />
-        <div className="between" style={{ marginTop: 6 }}>
-          <span className="muted small">
-            {cari.trim()
-              ? `${cocokCari.length} dari ${menuItems.length} menu`
-              : `${menuItems.length} menu`}
-          </span>
-          {cari.trim() && (
-            <button
-              className="btn"
-              style={{ padding: '4px 10px', fontSize: 13 }}
-              onClick={() => setCari('')}
-            >
-              Hapus pencarian
-            </button>
-          )}
-        </div>
-      </div>
-
-      {cari.trim() && grouped.length === 0 && (
-        <div className="card">
-          <p className="muted" style={{ margin: 0 }}>Tidak ada menu yang cocok dengan “{cari}”.</p>
-        </div>
+    <>
+      {varian && (
+        <PilihVarian item={varian} onTambah={tambahVarian} onTutup={() => setVarian(null)} />
       )}
 
-      {grouped.map((cat) => (
-        <div key={cat.id} className="card">
-          <div className="h2" style={{ marginBottom: 8 }}>{cat.name}</div>
-          <div className="col" style={{ gap: 8 }}>
-            {cat.items.map((it) => {
-              const opt = drinkOpt[it.id] || { temp: 'es', sweet: 'manis' };
-              const drinkKey = cartKey(it.id, { temp: opt.temp, sweet: opt.sweet });
-              const myLines = Object.entries(cart).filter(
-                ([k, q]) => q > 0 && parseCartKey(k).menuId === it.id
-              );
-              return (
-              <div key={it.id}>
-                <div className="between">
-                  <div style={{ flex: 1 }}>
-                    <div className="bold">{it.name}</div>
-                    <div className="muted small">{rupiah(it.price)}</div>
-                  </div>
-                  {!it.needs_cook_method && !it.needs_drink_option && (
-                    <div className="qty">
-                      {cart[cartKey(it.id)] > 0 && (
-                        <>
-                          <button onClick={() => setQty(cartKey(it.id), -1)}>−</button>
-                          <span className="bold">{cart[cartKey(it.id)]}</span>
-                        </>
-                      )}
-                      <button onClick={() => setQty(cartKey(it.id), 1)}>+</button>
-                    </div>
-                  )}
-                </div>
-                {it.needs_cook_method && (
-                  <div className="col" style={{ gap: 4, marginTop: 4, paddingLeft: 10 }}>
-                    {COOK_METHODS.map((mth) => {
-                      const key = cartKey(it.id, { method: mth.id });
-                      return (
-                        <div key={mth.id} className="between">
-                          <span className="small muted">{mth.emoji} {mth.label}</span>
-                          <div className="qty">
-                            {cart[key] > 0 && (
-                              <>
-                                <button onClick={() => setQty(key, -1)}>−</button>
-                                <span className="bold">{cart[key]}</span>
-                              </>
-                            )}
-                            <button onClick={() => setQty(key, 1)}>+</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {it.needs_drink_option && (
-                  <div className="col" style={{ gap: 6, marginTop: 6, paddingLeft: 10 }}>
-                    <div className="opt-row">
-                      {DRINK_TEMPS.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          className={`chip ${opt.temp === t.id ? 'chip-on' : ''}`}
-                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, temp: t.id } }))}
-                        >
-                          {t.emoji} {t.label}
-                        </button>
-                      ))}
-                      {SWEETNESS.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className={`chip ${opt.sweet === s.id ? 'chip-on' : ''}`}
-                          onClick={() => setDrinkOpt((d) => ({ ...d, [it.id]: { ...opt, sweet: s.id } }))}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="between">
-                      <span className="muted small">
-                        Tambah: {DRINK_TEMPS.find((t) => t.id === opt.temp)?.label} ·{' '}
-                        {SWEETNESS.find((s) => s.id === opt.sweet)?.label}
-                      </span>
-                      <div className="qty">
-                        {cart[drinkKey] > 0 && (
-                          <>
-                            <button onClick={() => setQty(drinkKey, -1)}>−</button>
-                            <span className="bold">{cart[drinkKey]}</span>
-                          </>
-                        )}
-                        <button onClick={() => setQty(drinkKey, 1)}>+</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {/* Kolom catatan per baris pesanan */}
-                {myLines.map(([key]) => {
-                  const v = parseCartKey(key);
-                  const labels = variantLabels({
-                    cook_method: v.method, drink_temp: v.temp, sweetness: v.sweet,
-                  });
-                  return (
-                    <input
-                      key={key}
-                      className="input"
-                      style={{ marginTop: 6 }}
-                      placeholder={
-                        labels.length
-                          ? `Catatan ${labels.join(' · ')}`
-                          : 'Catatan (opsional)'
-                      }
-                      value={notes[key] || ''}
-                      onChange={(e) => setNotes((n) => ({ ...n, [key]: e.target.value }))}
-                    />
-                  );
-                })}
+      <div className="papan-kasir">
+        {/* ---------- kiri: pemilihan menu ---------- */}
+        <div className="col">
+          <div className="card" style={{ padding: 12 }}>
+            <input
+              className="input" type="search"
+              placeholder="Cari menu… (mis. karubi, teh, sate)"
+              value={cari} onChange={(e) => setCari(e.target.value)}
+            />
+            <div className="rak-kategori" style={{ marginTop: 8 }}>
+              <button className={`chip ${!kategoriAktif ? 'chip-on' : ''}`}
+                onClick={() => setKategoriAktif('')}>Semua</button>
+              {categories.map((c) => (
+                <button key={c.id} className={`chip ${kategoriAktif === c.id ? 'chip-on' : ''}`}
+                  onClick={() => setKategoriAktif(kategoriAktif === c.id ? '' : c.id)}>{c.name}</button>
+              ))}
+            </div>
+            {cari.trim() && (
+              <div className="between" style={{ marginTop: 8 }}>
+                <span className="muted small">{cocokCari.length} dari {menuItems.length} menu</span>
+                <button className="btn" style={{ padding: '4px 10px', fontSize: 13 }}
+                  onClick={() => setCari('')}>Hapus pencarian</button>
               </div>
-              );
-            })}
+            )}
           </div>
-        </div>
-      ))}
 
-      {cartLines.length > 0 && (
-        <div className="card" style={{ position: 'sticky', bottom: 10 }}>
-          <div className="h2" style={{ marginBottom: 8 }}>Keranjang ({totalQty})</div>
-          {cartLines.map((l) => (
-            <div key={l.key} className="between small" style={{ marginBottom: 4 }}>
-              <span>
-                {l.qty}× {l.item.name}
-                {variantLabels({
-                  cook_method: l.method, drink_temp: l.temp, sweetness: l.sweet,
-                }, { emoji: false }).map((lab) => (
-                  <b key={lab}> [{lab}]</b>
+          {menuLaris.length > 0 && (
+            <div className="card" style={{ padding: 12, borderColor: 'var(--brand)' }}>
+              <div className="between" style={{ marginBottom: 8 }}>
+                <div className="h2">⭐ Menu Laris</div>
+                <span className="muted small">30 hari terakhir</span>
+              </div>
+              <div className="ubin-grid">
+                {menuLaris.map((it, i) => (
+                  <Ubin key={it.id} item={it} jumlah={jumlahPerMenu[it.id] || 0}
+                    tanda={i < 3 ? `#${i + 1}` : null} onKlik={() => ketuk(it)} />
                 ))}
-              </span>
-              <span>{rupiah(l.item.price * l.qty)}</span>
+              </div>
+            </div>
+          )}
+
+          {tampil.length === 0 && (
+            <div className="card">
+              <p className="muted" style={{ margin: 0 }}>
+                {cari.trim() ? `Tidak ada menu yang cocok dengan “${cari}”.` : 'Tidak ada menu.'}
+              </p>
+            </div>
+          )}
+
+          {perKategori.map((cat) => (
+            <div key={cat.id} className="card" style={{ padding: 12 }}>
+              {cat.name && <div className="h2" style={{ marginBottom: 8 }}>{cat.name}</div>}
+              <div className="ubin-grid">
+                {cat.items.map((it) => (
+                  <Ubin key={it.id} item={it} jumlah={jumlahPerMenu[it.id] || 0}
+                    onKlik={() => ketuk(it)} />
+                ))}
+              </div>
             </div>
           ))}
-          <hr className="hr" />
-          <div className="between small"><span className="muted">Subtotal</span><span>{rupiah(subtotal)}</span></div>
-          {pb1 > 0 && (
-            <div className="between small"><span className="muted">PB1 {pb1}%</span><span>{rupiah(tax)}</span></div>
-          )}
-          <div className="between bold" style={{ marginTop: 4 }}><span>Total</span><span>{rupiah(total)}</span></div>
-          {error && <p className="small" style={{ color: '#ff8585', marginTop: 8 }}>{error}</p>}
-          <button className="btn btn-brand btn-block" style={{ marginTop: 10 }} disabled={submitting} onClick={submit}>
-            {submitting ? 'Memproses…' : `Buat Order · ${rupiah(total)}`}
+        </div>
+
+        {/* ---------- kanan: keranjang & data order ---------- */}
+        <div className="col keranjang">
+          <div className="card" style={{ padding: 12 }}>
+            <div className="between" style={{ marginBottom: 8 }}>
+              <div className="h2">🧾 Keranjang {totalQty > 0 && `(${totalQty})`}</div>
+              {cartLines.length > 0 && (
+                <button className="btn" style={{ padding: '4px 10px', fontSize: 13 }}
+                  onClick={() => { setCart({}); setNotes({}); }}>Kosongkan</button>
+              )}
+            </div>
+
+            {cartLines.length === 0 && (
+              <p className="muted small" style={{ margin: 0 }}>
+                Ketuk menu di sebelah kiri untuk menambahkan.
+              </p>
+            )}
+
+            {cartLines.map((l) => {
+              const label = variantLabels({
+                cook_method: l.method, drink_temp: l.temp, sweetness: l.sweet,
+              }, { emoji: false });
+              return (
+                <div key={l.key} style={{ borderBottom: '1px solid var(--line)', padding: '8px 0' }}>
+                  <div className="between">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="small bold">{l.item.name}</div>
+                      {label.length > 0 && (
+                        <div className="muted small">{label.join(' · ')}</div>
+                      )}
+                      <div className="muted small">{rupiah(l.item.price * l.qty)}</div>
+                    </div>
+                    <div className="qty">
+                      <button onClick={() => ubahQty(l.key, -1)}>−</button>
+                      <span className="bold">{l.qty}</span>
+                      <button onClick={() => ubahQty(l.key, 1)}>+</button>
+                    </div>
+                  </div>
+                  <input
+                    className="input" style={{ marginTop: 6, padding: '6px 10px', fontSize: 13 }}
+                    placeholder="Catatan (opsional)"
+                    value={notes[l.key] || ''}
+                    onChange={(e) => setNotes((n) => ({ ...n, [l.key]: e.target.value }))}
+                  />
+                </div>
+              );
+            })}
+
+            {cartLines.length > 0 && (
+              <>
+                <div className="between small" style={{ marginTop: 10 }}>
+                  <span className="muted">Subtotal</span><span>{rupiah(subtotal)}</span>
+                </div>
+                {pb1 > 0 && (
+                  <div className="between small"><span className="muted">PB1 {pb1}%</span><span>{rupiah(tax)}</span></div>
+                )}
+                <div className="between bold" style={{ marginTop: 4, fontSize: 17 }}>
+                  <span>Total</span><span>{rupiah(total)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <div className="col" style={{ gap: 8 }}>
+              <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
+                <option value="">— Pilih meja —</option>
+                {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
+              </select>
+              <input className="input" placeholder="Nama pelanggan (opsional)"
+                value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <div className="row">
+                <label className={`btn ${payment === 'cashier' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+                  <input type="radio" style={{ display: 'none' }} checked={payment === 'cashier'} onChange={() => setPayment('cashier')} />
+                  Bayar di Kasir
+                </label>
+                <label className={`btn ${payment === 'qris' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+                  <input type="radio" style={{ display: 'none' }} checked={payment === 'qris'} onChange={() => setPayment('qris')} />
+                  QRIS
+                </label>
+              </div>
+            </div>
+
+            {error && <p className="small" style={{ color: '#c0271f', marginTop: 8 }}>{error}</p>}
+
+            <button className="btn btn-brand btn-block" style={{ marginTop: 10 }}
+              disabled={submitting || !cartLines.length} onClick={submit}>
+              {submitting ? 'Memproses…' : `Buat Order · ${rupiah(total)}`}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {cartLines.length > 0 && (
+        <div className="bar-keranjang">
+          <div>
+            <div className="bold" style={{ fontSize: 17 }}>{rupiah(total)}</div>
+            <div className="muted small">{totalQty} porsi di keranjang</div>
+          </div>
+          <button
+            className="btn btn-brand"
+            onClick={() => document.querySelector('.keranjang')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            Lihat keranjang →
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 }

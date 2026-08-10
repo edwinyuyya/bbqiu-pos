@@ -1,0 +1,111 @@
+<div class="page">
+  <div class="judul-peran"><h2>{{NO}}. Gudang &amp; Stok</h2><p>Buka: halaman <b>Stok</b> · perlu PIN gudang</p></div>
+
+  <h3>Dua lapis bahan — ini kunci memahami semuanya</h3>
+  <svg viewBox="0 0 700 150" style="width:100%;height:auto;margin:12px 0">
+    <defs><marker id="p3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8a7a6b"/></marker>
+    <style>.k3{fill:#fff;stroke:#d6ccbe;stroke-width:2;rx:10}.t3{font:bold 12px "DejaVu Sans";fill:#3f2a1d}.s3{font:10px "DejaVu Sans";fill:#7c6f64}.a3{stroke:#8a7a6b;stroke-width:2;fill:none;marker-end:url(#p3)}.lb3{font:italic 10px "DejaVu Sans";fill:#c2410c}</style></defs>
+    <rect class="k3" x="6" y="30" width="190" height="76" fill="#fef2f2"/>
+    <text class="t3" x="22" y="56">BAHAN MENTAH</text>
+    <text class="s3" x="22" y="76">US Karubi (gelondongan)</text>
+    <text class="s3" x="22" y="92">kategori: daging</text>
+    <path class="a3" d="M200,68 L252,68"/>
+    <text class="lb3" x="200" y="60">diiris</text>
+    <rect class="k3" x="256" y="30" width="200" height="76" fill="#fffbeb"/>
+    <text class="t3" x="272" y="56">BAHAN SIAP PAKAI</text>
+    <text class="s3" x="272" y="76">karubi (Maincourse)</text>
+    <text class="s3" x="272" y="92">kategori: Bahan Baku</text>
+    <path class="a3" d="M460,68 L512,68"/>
+    <text class="lb3" x="458" y="60">resep</text>
+    <rect class="k3" x="516" y="30" width="178" height="76" fill="#f0fdf4"/>
+    <text class="t3" x="532" y="56">MENU</text>
+    <text class="s3" x="532" y="76">"karubi" butuh 100 g</text>
+    <text class="s3" x="532" y="92">"karubi small" butuh 30 g</text>
+  </svg>
+
+  <div class="box info">
+    <p class="judul">Menu tidak punya stok sendiri</p>
+    <p>Sisa porsi yang tampil ke waiter dihitung dari <b>bahan siap pakai</b> dibagi kebutuhan resep. Jadi kalau habis produksi, yang Anda tambahkan adalah bahan siap pakainya — bukan menunya.</p>
+  </div>
+
+  <h3>Mencatat barang datang</h3>
+  <p>Tab <b>📥 Barang Datang</b>. Cari barangnya, tekan + sebanyak yang datang, boleh banyak barang sekaligus, lalu simpan. Selesai.</p>
+  <p>Tab ini <b>hanya untuk barang dari supplier</b>. Bahan yang Anda buat sendiri jangan dicatat di sini.</p>
+
+  <div class="box awas">
+    <p class="judul">Jangan catat hasil produksi sebagai barang datang</p>
+    <p>Kalau daging gelondongan diiris jadi porsi lalu dicatat lewat Barang Datang, daging itu tercatat dua kali — sekali sebagai gelondongan, sekali sebagai potongan. Stok kelihatan lebih banyak dari kenyataan. Gunakan tab Produksi.</p>
+  </div>
+</div>
+
+<div class="page">
+  <h3>Produksi — mengubah bahan mentah jadi bahan siap pakai</h3>
+  <p>Contoh: mengiris daging jadi porsi karubi, atau membuat bumbu dari beberapa bahan.</p>
+
+  <h4>Sekali saja: atur resep produksinya</h4>
+  <ol class="langkah">
+    <li>Buka <b>Stok → 🍳 Produksi → ⚙️ Atur Resep Produksi</b>.</li>
+    <li>Pilih <b>bahan hasil</b>, misalnya <i>karubi (Maincourse)</i>.</li>
+    <li>Tambahkan <b>bahan mentahnya</b>, misalnya <i>US Karubi</i>, dengan takaran <b>1,15</b> — artinya butuh 1,15 gram gelondongan untuk menghasilkan 1 gram potongan siap pakai. Selisihnya adalah tulang dan lemak yang terbuang.</li>
+  </ol>
+  <p>Cukup diatur sekali. Setelah itu produksi tinggal isi jumlah.</p>
+
+  <h4>Setiap kali produksi — isi per porsi, bukan per gram</h4>
+  <p>Dapur berpikir “hari ini kita produksi 5 porsi karubi small”, bukan “150 gram”. Jadi isikan seperti itu saja; sistem yang mengalikan.</p>
+  <ol class="langkah">
+    <li>Buka <b>Stok → 🍳 Produksi → 🍳 Catat Produksi</b>.</li>
+    <li>Cari bahan hasilnya, misalnya <i>karubi (Maincourse)</i>. Kolomnya bisa diketik — tidak perlu menggulir daftar bahan yang panjang.</li>
+    <li>Tekan <b>Hitung dari porsi menu</b>.</li>
+    <li>Pilih menunya, misalnya <i>karubi small · 30 gram/porsi</i>.</li>
+    <li>Isi <b>jumlah porsi</b>: 5.</li>
+    <li>Layar menampilkan hitungannya: <b>5 porsi × 30 gram = 150 gram</b>. Periksa sebentar apakah masuk akal, lalu tekan <b>Simpan Produksi</b>.</li>
+  </ol>
+
+  <div class="layar">
+    <div class="bar">💻 Stok → 🍳 Catat Produksi</div>
+    <div class="isi">
+      <div class="kartu"><span class="small muted">Bahan yang dihasilkan</span><br><b>karubi (Maincourse)</b> <span class="small muted">· gram</span></div>
+      <div class="baris" style="margin-bottom:8px"><span class="tbl">Hitung dari porsi menu</span> <span class="tbl abu">Isi langsung (gram)</span></div>
+      <div class="kartu"><span class="small muted">Menu yang diproduksi</span><br><b>karubi small</b> <span class="small muted">· 30 gram/porsi</span></div>
+      <div class="kartu"><span class="small muted">Jumlah porsi</span><br><b>5</b></div>
+      <div class="kartu" style="border-color:#16a34a">
+        <p class="small" style="margin:0">5 porsi × 30 gram = <b>150 gram</b> masuk stok <b>karubi (Maincourse)</b>.</p>
+      </div>
+      <div class="kartu">
+        <div class="kelompok" style="margin-top:0">SETELAH DISIMPAN, STOK CUKUP UNTUK</div>
+        <div class="baris small"><span>karubi small</span><b>5 porsi</b></div>
+        <div class="baris small"><span>karubi</span><b>1 porsi</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box tips">
+    <p class="judul">Satu langkah, dua akibat</p>
+    <p>Sekali simpan, stok bahan jadi <b>bertambah</b> dan bahan mentahnya <b>berkurang</b> otomatis. Tidak ada langkah kedua yang bisa terlupa.</p>
+  </div>
+
+  <div class="box info">
+    <p class="judul">Kenapa stoknya tetap disimpan dalam gram?</p>
+    <p>Karena satu bahan dipakai beberapa menu dengan takaran berbeda: <b>karubi (Maincourse)</b> dipakai menu “karubi” (100 g) dan “karubi small” (30 g). Kalau stoknya disimpan “5 porsi”, sistem tidak tahu porsi yang mana. Gram adalah satu-satunya angka yang tidak membingungkan — porsi hanyalah cara mengetiknya.</p>
+    <p>Itu juga sebabnya panel <b>“stok cukup untuk berapa porsi”</b> menampilkan beberapa menu sekaligus: angka-angka itu <b>berbagi stok yang sama</b>. Kalau karubi small terjual, sisa porsi karubi biasa ikut turun.</p>
+  </div>
+
+  <div class="box ingat">
+    <p class="judul">Bahan yang tidak dipakai menu apa pun</p>
+    <p>Untuk bumbu curah dan sejenisnya, pilihan “Hitung dari porsi menu” tidak muncul — isi saja langsung dalam satuannya. Itu normal.</p>
+  </div>
+
+  <h3>Tugas rutin lainnya</h3>
+  <table>
+    <tr><th style="width:30%">Tab</th><th>Untuk apa</th></tr>
+    <tr><td><b>Daftar Stok</b></td><td>Lihat sisa semua bahan, ubah harga beli, atur stok minimum.</td></tr>
+    <tr><td><b>🧮 Opname Massal</b></td><td>Hitung fisik lalu samakan angkanya. Lakukan rutin — ini satu-satunya cara memperbaiki stok yang sudah meleset.</td></tr>
+    <tr><td><b>+ Barang</b></td><td>Daftarkan bahan baru.</td></tr>
+    <tr><td><b>🚚 Supplier</b></td><td>Daftar pemasok.</td></tr>
+  </table>
+
+  <div class="box ingat">
+    <p class="judul">Stok minus itu wajar, tapi harus diluruskan</p>
+    <p>Sistem sengaja mengizinkan stok minus supaya pesanan pelanggan dan produksi tidak pernah tertolak gara-gara catatan belum lengkap. Angka minus artinya: bahan ini terpakai tapi belum pernah dicatat masuk. Perbaiki lewat Opname.</p>
+  </div>
+</div>

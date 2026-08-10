@@ -1,0 +1,101 @@
+<div class="page">
+  <div class="judul-peran"><h2>{{NO}}. Kasir</h2><p>Buka: halaman <b>Kasir</b> · perlu PIN kasir</p></div>
+
+  <p>Kasir adalah pintu antara pelanggan dan dapur. Selama Anda belum menandai lunas, dapur tidak bergerak.</p>
+
+  <h3>Tampilan satu tagihan</h3>
+  <div class="layar">
+    <div class="bar">💻 Halaman Kasir — tab Aktif</div>
+    <div class="isi">
+      <div class="kartu">
+        <div class="baris"><b>#24 · Meja AC 3</b><span class="lencana l-kuning">Belum bayar</span></div>
+        <div style="margin-top:6px">
+          <span class="lencana l-biru">open</span>
+          <span class="lencana l-abu">Kasir</span>
+          <span class="lencana l-merah">⏸ Dapur menunggu pelunasan</span>
+        </div>
+        <hr style="border:0;border-top:1px solid #e3dbce;margin:9px 0">
+        <div class="baris small"><span>2× karubi <span class="lencana l-biru">🔥 GRILL</span></span><span>Rp 70.000 &nbsp;<b style="color:#b91c1c">✖</b></span></div>
+        <div class="baris small"><span>1× Teh</span><span>Rp 7.000 &nbsp;<b style="color:#b91c1c">✖</b></span></div>
+        <div class="baris small" style="opacity:.5"><span style="text-decoration:line-through">1× Sate cumi</span> <span class="lencana l-merah">batal: bahan habis</span><span style="text-decoration:line-through">Rp 10.000</span></div>
+        <hr style="border:0;border-top:1px solid #e3dbce;margin:9px 0">
+        <div class="baris"><b>Total</b><b>Rp 84.700</b></div>
+        <div class="baris" style="margin-top:8px">
+          <span class="kartu" style="flex:1;margin:0;padding:6px 9px" class="muted">Kode promo / diskon</span>
+          <span class="tbl">Pakai</span>
+        </div>
+        <div style="margin-top:9px"><span class="tbl hijau">Tandai Lunas</span> <span class="tbl abu">Tutup Bill</span> <span class="tbl abu">Batalkan</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Tugas harian, urut dari yang paling sering</h3>
+
+  <h4>A. Menerima pembayaran</h4>
+  <ol class="langkah">
+    <li>Cari tagihan mejanya di tab <b>Aktif</b>. Tanda merah <b>⏸ Dapur menunggu pelunasan</b> artinya dapur belum jalan.</li>
+    <li>Kalau pelanggan punya <b>kode promo</b>, masukkan dulu di kolom <b>Kode promo</b> lalu tekan <b>Pakai</b>. Total langsung berubah.</li>
+    <li>Terima uang sesuai total yang tampil.</li>
+    <li>Tekan <b>Tandai Lunas</b>. Dalam beberapa detik pesanan muncul di layar dapur.</li>
+  </ol>
+
+  <div class="box awas">
+    <p class="judul">Promo tidak bisa dipasang setelah lunas</p>
+    <p>Urutannya selalu: <b>promo dulu → baru terima uang → baru Tandai Lunas</b>. Kalau terbalik, sistem menolak dan Anda harus mengembalikan uang secara manual.</p>
+  </div>
+
+  <h4>B. Pembayaran QRIS</h4>
+  <p>Pelanggan bayar lewat QRIS di HP-nya, lalu menekan "Saya sudah bayar". Bill akan bertanda <b>🔔 Klaim bayar — cek app bank</b>.</p>
+  <p><b>Itu belum berarti lunas.</b> Cek mutasi di aplikasi bank dulu. Kalau uangnya benar masuk, baru tekan <b>Tandai Lunas</b>.</p>
+
+  <h4>C. Menu habis — batalkan satu item</h4>
+  <ol class="langkah">
+    <li>Tekan tombol <b>✖</b> di baris menu yang habis.</li>
+    <li>Isi alasannya, misalnya <i>bahan habis</i>.</li>
+    <li>Isi nama atau inisial Anda.</li>
+  </ol>
+  <p>Total otomatis dihitung ulang, stok bahannya dikembalikan, dan item hilang dari layar dapur supaya tidak terlanjur dimasak. Pemilik menerima notifikasi.</p>
+</div>
+
+<div class="page">
+  <h4>D. Membatalkan seluruh tagihan (void)</h4>
+  <p>Hanya untuk kasus pelanggan batal total. Wajib isi alasan, nama petugas, <b>dan foto wajah</b>. Ini pengaman anti-kecurangan, bukan formalitas.</p>
+  <div class="box awas">
+    <p class="judul">Jangan pakai void untuk membatalkan satu menu</p>
+    <p>Kalau cuma satu menu yang habis, pakai tombol ✖ per item. Void seluruh bill menghapus semua data pesanan dan harus input ulang dari nol.</p>
+  </div>
+
+  <h4>E. Menutup tagihan</h4>
+  <p>Setelah pelanggan selesai dan sudah bayar, tekan <b>Tutup Bill</b>. Mejanya otomatis dianggap kosong dan bisa dipakai tamu berikutnya.</p>
+  <div class="box awas">
+    <p class="judul">Bill yang lupa ditutup bikin meja "terisi" selamanya</p>
+    <p>Sistem antrian menghitung meja terisi dari bill yang masih terbuka. Kalau lupa menutup, meja itu tidak akan pernah ditawarkan ke antrian meski fisiknya kosong. Biasakan tutup bill begitu pelanggan pergi.</p>
+  </div>
+
+  <h4>F. Input pesanan manual</h4>
+  <p>Untuk pelanggan yang tidak mau atau tidak bisa scan QR. Buka tab <b>Input Order</b>, pilih meja, cari menu lewat kotak pencarian, lalu tekan Buat Order. Fungsinya sama persis dengan pesanan lewat QR.</p>
+
+  <h4>G. Mencari nota lama</h4>
+  <p>Di atas daftar bill ada kotak pencarian. Bisa dicari dari <b>nomor nota, nomor meja, nama pemesan, atau isi pesanannya</b> — tamu biasanya ingat salah satu dari itu, bukan nomor notanya.</p>
+  <p>Tiap kartu bill juga menampilkan waktunya: <b>Hari ini 19:32</b>, <b>Kemarin 21:05</b>, atau tanggal lengkap untuk nota yang lebih lama. Pakai itu saat mencocokkan nota dengan setoran.</p>
+
+  <div class="box tips">
+    <p class="judul">Pencarian tidak rewel</p>
+    <p>Huruf besar-kecil dan tanda baca diabaikan, dan urutan katanya bebas. Mengetik <i>“karubi slice”</i> tetap menemukan <i>“karubi (slice)”</i>, dan <i>“small karubi”</i> menemukan <i>“karubi small”</i>. Kotak pencarian yang sama ada di daftar menu, stok, meja, reservasi, dan promo.</p>
+  </div>
+
+  <h3>Arti tanda-tanda di halaman Kasir</h3>
+  <table>
+    <tr><th style="width:40%">Tanda</th><th>Artinya</th></tr>
+    <tr><td><span class="lencana l-kuning">Belum bayar</span></td><td>Belum ada uang diterima.</td></tr>
+    <tr><td><span class="lencana l-hijau">Lunas</span></td><td>Sudah dibayar penuh. Dapur sudah bisa jalan.</td></tr>
+    <tr><td><span class="lencana l-merah">⏸ Dapur menunggu pelunasan</span></td><td>Pesanan tertahan karena belum dibayar. Ini yang perlu segera diurus.</td></tr>
+    <tr><td><span class="lencana l-kuning">🔔 Klaim bayar</span></td><td>Pelanggan mengaku sudah transfer. <b>Cek mutasi dulu</b> sebelum menandai lunas.</td></tr>
+    <tr><td><span class="lencana l-kuning">📅 Reservasi ber-DP</span></td><td>Tamu reservasi yang sudah bayar DP. Dapur sudah jalan; sisa tagihannya tertulis di badge itu.</td></tr>
+  </table>
+
+  <div class="box tips">
+    <p class="judul">Kebiasaan yang menyelamatkan</p>
+    <p>Setiap 15 menit, lihat sekilas apakah ada badge merah <b>⏸ Dapur menunggu pelunasan</b> yang menggantung. Itu tanda ada pelanggan yang menunggu makanan yang belum diperintahkan dibuat.</p>
+  </div>
+</div>

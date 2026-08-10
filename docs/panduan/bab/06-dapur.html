@@ -1,0 +1,62 @@
+<div class="page">
+  <div class="judul-peran"><h2>{{NO}}. Dapur</h2><p>Buka: halaman <b>Kitchen Display</b> · perlu PIN dapur</p></div>
+
+  <p>Layar ini menyegarkan sendiri tiap 5 detik. Anda tidak perlu me-refresh. Tekan <b>🔔 Aktifkan Suara</b> sekali di awal shift supaya ada bunyi saat pesanan baru masuk.</p>
+
+  <h3>Membaca kartu pesanan</h3>
+  <div class="layar">
+    <div class="bar">🍳 Kitchen Display</div>
+    <div class="isi">
+      <div class="kartu">
+        <div class="baris"><b>#24 · Meja AC 3</b><span class="lencana l-biru">⏱ 4m 12s</span></div>
+        <div style="margin-top:5px"><span class="lencana l-hijau">Lunas</span> <span class="lencana l-merah">Belum dicetak</span></div>
+
+        <div class="kartu" style="border-left:4px solid #ff5a36;margin-top:9px">
+          <div class="small" style="font-weight:700">Shaokao</div>
+          <div class="kelompok">SHAO KAO</div>
+          <div class="baris small"><span><b>2×</b> Usus ayam <span class="lencana l-kuning">🍳 goreng dulu</span></span><span class="tbl abu">Ready</span></div>
+          <div class="baris small" style="margin-top:5px"><span><b>1×</b> Sate kangkung</span><span class="tbl abu">Ready</span></div>
+        </div>
+
+        <div class="kartu" style="border-left:4px solid #ffb020">
+          <div class="small" style="font-weight:700">Maincourse</div>
+          <div class="kelompok">GRILL &amp; STEAMBOAT</div>
+          <div class="baris small"><span><b>2×</b> karubi <span class="lencana l-biru">🔥 GRILL</span></span><span class="tbl abu">Ready</span></div>
+          <div class="kelompok">KUAH</div>
+          <div class="baris small"><span><b>1×</b> Mala</span><span class="tbl abu">Ready</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Arti tiap tanda</h3>
+  <table>
+    <tr><th style="width:34%">Tanda</th><th>Artinya</th></tr>
+    <tr><td><b>Shaokao / Maincourse / Bar</b></td><td>Station yang mengerjakan. Kalau tablet Anda khusus satu station, pakai tombol saringan di atas.</td></tr>
+    <tr><td><b>SHAO KAO / GRILL &amp; STEAMBOAT / KUAH</b></td><td>Kelompok jenis masakan di dalam station itu. Semua sate digabung jadi satu "SHAO KAO" — tidak dipisah per harga.</td></tr>
+    <tr><td><span class="lencana l-biru">🔥 GRILL</span> / <span class="lencana l-biru">🍲 STEAMBOAT</span></td><td>Pilihan pelanggan: mau dibakar atau direbus.</td></tr>
+    <tr><td><span class="lencana l-kuning">🍳 goreng dulu</span></td><td>Digoreng dulu baru dibakar. Sayur &amp; jamur tidak bertanda ini, kecuali jamur enoki.</td></tr>
+    <tr><td><span class="lencana l-merah">tambahan ke-2</span></td><td>Pesanan susulan dari meja yang sama. Ini pesanan baru, bukan yang tadi terlewat.</td></tr>
+    <tr><td><span class="lencana l-biru">⏱ 4m 12s</span></td><td>Lama pesanan menunggu. Kuning lewat 10 menit, merah lewat 20 menit.</td></tr>
+    <tr><td><span class="lencana l-kuning">📅 Reservasi · DP</span></td><td>Tamu reservasi ber-DP. Dikerjakan seperti biasa; sisa tagihan diurus kasir.</td></tr>
+  </table>
+
+  <h3>Cara kerja</h3>
+  <ol class="langkah">
+    <li><b>Pesanan muncul + bunyi.</b> Hanya pesanan yang sudah lunas yang tampil di sini.</li>
+    <li><b>Cetak struk station</b> lewat tombol di bawah kartu kalau butuh kertas di area masak.</li>
+    <li><b>Masak sesuai kelompoknya.</b> Perhatikan tanda 🍳 goreng dulu dan 🔥/🍲.</li>
+    <li><b>Tekan Ready</b> begitu satu item matang.</li>
+    <li><b>Tekan Served</b> setelah diantar ke meja. Item hilang dari layar.</li>
+  </ol>
+
+  <div class="box ingat">
+    <p class="judul">Pesanan tidak muncul di layar?</p>
+    <p>Bukan layarnya rusak. Pesanan yang belum lunas memang sengaja disembunyikan. Tanyakan ke kasir apakah sudah ditandai lunas.</p>
+  </div>
+
+  <div class="box awas">
+    <p class="judul">Struk yang sama tercetak dua kali?</p>
+    <p>Perhatikan tulisan <b>PESANAN TAMBAHAN ke-2</b> di kepala struk. Itu artinya pesanan susulan — <b>hanya isi struk itu</b> yang perlu dimasak, bukan seluruh isi tagihan. Kalau tidak ada tulisan itu, berarti memang pesanan pertama.</p>
+  </div>
+</div>

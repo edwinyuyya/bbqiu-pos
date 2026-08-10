@@ -1,0 +1,75 @@
+<div class="page">
+  <h2>{{NO}}. Kalau Ada Masalah</h2>
+  <p class="muted">Urut dari yang paling sering terjadi.</p>
+
+  <table>
+    <tr><th style="width:38%">Gejala</th><th>Penyebab &amp; cara mengatasi</th></tr>
+
+    <tr><td><b>Pesanan tidak muncul di layar dapur</b></td>
+        <td>Hampir selalu karena <b>belum ditandai lunas</b>. Cek di Kasir, cari badge merah "⏸ Dapur menunggu pelunasan".</td></tr>
+
+    <tr><td><b>Pelanggan tidak bisa buka menu setelah scan</b></td>
+        <td>Kalau muncul halaman login Vercel, berarti proteksi situs masih aktif dan harus dimatikan oleh pemilik di pengaturan Vercel. Kalau muncul "Meja tidak ditemukan", QR-nya milik meja yang sudah dihapus — cetak ulang dari Meja &amp; QR.</td></tr>
+
+    <tr><td><b>Tombol + di menu tidak bisa ditekan</b></td>
+        <td>Menu itu punya batas porsi harian dan sudah habis. Admin bisa menambah lewat kolom sisa porsi, atau kosongkan supaya tak terbatas.</td></tr>
+
+    <tr><td><b>Satu meja punya dua tagihan</b></td>
+        <td>Terjadi kalau tagihan pertama sudah lunas lalu pelanggan pesan lagi — itu wajar dan benar. Kalau dua-duanya belum lunas, laporkan ke pemilik.</td></tr>
+
+    <tr><td><b>Kode promo ditolak</b></td>
+        <td>Baca pesannya: sudah kedaluwarsa, belum mulai berlaku, sedang dinonaktifkan, atau bill sudah lunas. Kode tidak bisa dipasang setelah pembayaran diterima.</td></tr>
+
+    <tr><td><b>PIN tidak bisa masuk</b></td>
+        <td>Layar PIN akan menampilkan catatan konfigurasi di bawah tombol Masuk, misalnya "memakai STAFF_PIN". Tunjukkan tulisan itu ke pemilik.</td></tr>
+
+    <tr><td><b>Struk dapur mencetak semua menu lagi</b></td>
+        <td>Perhatikan tulisan "PESANAN TAMBAHAN ke-2" di kepala struk. Kalau ada, hanya isi struk itu yang perlu dimasak.</td></tr>
+
+    <tr><td><b>Stok bahan jadi bertambah tapi mentahnya tidak berkurang</b></td>
+        <td>Bahan itu belum punya resep produksi. Atur di <b>Stok → 🍳 Produksi → ⚙️ Atur Resep Produksi</b>.</td></tr>
+
+    <tr><td><b>Sisa porsi tertulis "belum diinput"</b></td>
+        <td>Stok gudang memang belum pernah diisi. Bukan kerusakan. Isi lewat halaman Stok.</td></tr>
+
+    <tr><td><b>Stok bahan minus</b></td>
+        <td>Bahan terpakai tapi belum dicatat masuk. Perbaiki lewat Opname Massal.</td></tr>
+
+    <tr><td><b>Meja kelihatan terisi padahal kosong</b></td>
+        <td>Ada bill yang lupa ditutup. Buka Kasir, cari tagihan meja itu, tekan Tutup Bill.</td></tr>
+
+    <tr><td><b>Suara notifikasi tidak bunyi</b></td>
+        <td>Tekan <b>🔔 Aktifkan Suara</b> di pojok kanan atas. Browser tidak mengizinkan bunyi sebelum ada sentuhan. Ulangi tiap kali halaman dibuka ulang.</td></tr>
+
+    <tr><td><b>WhatsApp tidak terbuka saat tekan tombol 💬</b></td>
+        <td>WhatsApp belum login di perangkat itu, atau nomor tamu tidak diisi. Tombol memang tidak muncul kalau nomornya kosong.</td></tr>
+
+    <tr><td><b>Printer bluetooth 58mm error saat mencetak</b></td>
+        <td>Anda memakai tombol <b>Cetak lewat browser</b>. Itu memang tidak bisa untuk printer bluetooth. Pakai tombol <b>Cetak ke Printer 58mm (RawBT)</b> — lihat bab Mencetak Struk.</td></tr>
+
+    <tr><td><b>Meja yang baru ditambahkan seperti tidak ada</b></td>
+        <td>Coba ketik nomornya di kotak pencarian daftar meja. Kalau ketemu berarti dia ada, hanya letaknya tidak seperti yang Anda kira.</td></tr>
+
+    <tr><td><b>Menu tidak ketemu saat dicari</b></td>
+        <td>Ketik satu kata saja dulu, misalnya “karubi” bukan “karubi slice besar”. Di bawah kotak pencarian tertulis berapa hasil yang cocok dari total — kalau tertulis “Tidak ada yang cocok”, memang menunya tidak ada.</td></tr>
+
+    <tr><td><b>Produksi disimpan tapi jumlah porsinya terasa salah</b></td>
+        <td>Periksa menu yang dipilih saat mencatat produksi. “karubi” butuh 100 gram per porsi, “karubi small” hanya 30 gram — memilih menu yang salah membuat jumlah gramnya meleset tiga kali lipat.</td></tr>
+  </table>
+
+  <h3 style="margin-top:26px">Yang TIDAK bisa dibatalkan</h3>
+  <div class="box awas">
+    <p>Beberapa hal bersifat final untuk menjaga laporan keuangan tetap benar:</p>
+    <p>• Bill yang sudah <b>ditutup</b> — item dan diskonnya tidak bisa diubah lagi<br>
+       • Bill yang sudah <b>lunas</b> — kode promo tidak bisa dipasang<br>
+       • Pesanan yang sudah <b>dimasak</b> — bahannya sudah terpakai walau itemnya dibatalkan</p>
+    <p>Kalau terlanjur salah, catat kejadiannya dan laporkan ke pemilik untuk dikoreksi manual. Jangan mencoba menutupi dengan void.</p>
+  </div>
+
+  <div class="box tips">
+    <p class="judul">Sebelum menyerah, coba tiga hal ini</p>
+    <p><b>1.</b> Refresh halaman (tarik ke bawah di HP, atau tekan F5 di komputer).<br>
+       <b>2.</b> Tutup dan buka lagi halamannya.<br>
+       <b>3.</b> Cek koneksi internet — sistem ini butuh internet untuk semua hal.</p>
+  </div>
+</div>

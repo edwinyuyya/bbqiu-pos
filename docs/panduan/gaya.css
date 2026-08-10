@@ -1,0 +1,77 @@
+@page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body{font-family:"DejaVu Sans","Segoe UI",system-ui,sans-serif;color:#241b14;font-size:11pt;line-height:1.55;margin:0}
+  h1,h2,h3,h4{margin:0 0 .4em;line-height:1.25}
+  h2{font-size:19pt;color:#c2410c;border-bottom:3px solid #f0a37a;padding-bottom:6px;margin-top:0}
+  h3{font-size:14pt;color:#7c2d12;margin-top:1.4em}
+  h4{font-size:11.5pt;color:#3f2a1d;margin-top:1.1em}
+  p{margin:.5em 0}
+  .page{page-break-after:always}
+  .page:last-child{page-break-after:auto}
+  .muted{color:#7c6f64}
+  .small{font-size:9.5pt}
+
+  /* ---------- SAMPUL ---------- */
+  .cover{height:250mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  .cover .logo{width:110px;height:110px;border-radius:26px;background:linear-gradient(135deg,#e0552c,#d99411);
+    display:flex;align-items:center;justify-content:center;font-size:52px;margin-bottom:26px}
+  .cover h1{font-size:34pt;color:#c2410c;letter-spacing:-.5px}
+  .cover .sub{font-size:14pt;color:#7c6f64;margin-top:6px}
+  .cover .tag{margin-top:34px;font-size:10.5pt;color:#7c6f64;border-top:1px solid #e3dbce;padding-top:18px;width:70%}
+
+  /* ---------- KOTAK CATATAN ---------- */
+  .box{border-radius:10px;padding:11px 14px;margin:12px 0;border-left:5px solid}
+  .box p{margin:.25em 0}
+  .box .judul{font-weight:700;margin-bottom:3px}
+  .awas{background:#fef2f2;border-color:#dc2626}
+  .awas .judul{color:#b91c1c}
+  .tips{background:#f0fdf4;border-color:#16a34a}
+  .tips .judul{color:#15803d}
+  .info{background:#eff6ff;border-color:#2563eb}
+  .info .judul{color:#1d4ed8}
+  .ingat{background:#fffbeb;border-color:#d99411}
+  .ingat .judul{color:#a16207}
+
+  /* ---------- LANGKAH ---------- */
+  ol.langkah{list-style:none;counter-reset:l;padding:0;margin:14px 0}
+  ol.langkah>li{counter-increment:l;position:relative;padding:0 0 14px 42px;margin:0}
+  ol.langkah>li::before{content:counter(l);position:absolute;left:0;top:-1px;width:28px;height:28px;
+    background:#e0552c;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:12pt}
+  ol.langkah>li b{color:#7c2d12}
+
+  /* ---------- TABEL ---------- */
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:10pt}
+  th,td{border:1px solid #e3dbce;padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#f6f2ec;font-weight:700;color:#7c2d12}
+
+  /* ---------- TIRUAN LAYAR ---------- */
+  .layar{border:2px solid #d6ccbe;border-radius:12px;overflow:hidden;margin:14px 0;background:#fff}
+  .layar .bar{background:#3f2a1d;color:#fff;padding:6px 12px;font-size:9.5pt;font-weight:700}
+  .layar .isi{padding:12px;background:#f6f2ec}
+  .kartu{background:#fff;border:1px solid #e3dbce;border-radius:9px;padding:9px 11px;margin-bottom:8px}
+  .kartu:last-child{margin-bottom:0}
+  .baris{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .lencana{display:inline-block;padding:2px 9px;border-radius:99px;font-size:8.5pt;font-weight:700}
+  .l-hijau{background:#dcfce7;color:#15803d}
+  .l-merah{background:#fee2e2;color:#b91c1c}
+  .l-kuning{background:#fef3c7;color:#a16207}
+  .l-biru{background:#dbeafe;color:#1d4ed8}
+  .l-abu{background:#eee8df;color:#6b5c4d}
+  .tbl{display:inline-block;background:#e0552c;color:#fff;border-radius:8px;padding:5px 13px;font-weight:700;font-size:9.5pt}
+  .tbl.abu{background:#eee8df;color:#3f2a1d}
+  .tbl.hijau{background:#1f9d57}
+  .kelompok{font-size:8.5pt;font-weight:700;letter-spacing:.05em;color:#8a7a6b;border-bottom:1px solid #e3dbce;
+    padding-bottom:2px;margin:8px 0 6px}
+
+  /* ---------- DAFTAR ISI ---------- */
+  .toc{margin-top:18px}
+  .toc div{display:flex;justify-content:space-between;border-bottom:1px dotted #d6ccbe;padding:8px 2px;font-size:11.5pt}
+  .toc .bab{font-weight:700;color:#7c2d12}
+  .peran{display:inline-block;font-size:8.5pt;padding:1px 8px;border-radius:99px;background:#f0e6d8;color:#7c2d12;font-weight:700;margin-left:8px}
+
+  .judul-peran{background:linear-gradient(135deg,#c2410c,#d99411);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:16px}
+  .judul-peran h2{color:#fff;border:0;margin:0;padding:0;font-size:20pt}
+  .judul-peran p{margin:4px 0 0;font-size:10.5pt;opacity:.92}
+  .dua{display:flex;gap:14px}
+  .dua>*{flex:1}

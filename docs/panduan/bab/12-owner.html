@@ -1,0 +1,55 @@
+<div class="page">
+  <div class="judul-peran"><h2>{{NO}}. Dashboard Owner</h2><p>Buka: halaman <b>Owner</b> · perlu PIN owner</p></div>
+
+  <p>Menyegarkan sendiri tiap 15 detik. Semua angka dihitung otomatis dari transaksi — tidak ada input manual.</p>
+
+  <table>
+    <tr><th style="width:32%">Angka</th><th>Artinya</th></tr>
+    <tr><td><b>Omzet (lunas)</b></td><td>Uang yang benar-benar sudah diterima. Bill belum bayar tidak dihitung.</td></tr>
+    <tr><td><b>Total order</b></td><td>Jumlah transaksi hari ini.</td></tr>
+    <tr><td><b>HPP (estimasi)</b></td><td>Biaya bahan, dihitung dari resep × harga beli terakhir. Menu tanpa resep tidak terhitung.</td></tr>
+    <tr><td><b>Margin Kotor</b></td><td>Omzet dikurangi HPP. Belum termasuk gaji, sewa, listrik.</td></tr>
+    <tr><td><b>Void / Batal</b></td><td>Titik paling rawan kebocoran. <b>Periksa ini tiap hari.</b></td></tr>
+    <tr><td><b>Penjualan per Station</b></td><td>Sebaran omzet antara Shaokao, Maincourse, dan Bar.</td></tr>
+    <tr><td><b>Stok Menipis</b></td><td>Bahan yang perlu segera dibelanjakan.</td></tr>
+    <tr><td><b>⏱️ Kinerja Dapur</b></td><td>Rata-rata waktu dari pesanan masuk sampai selesai.</td></tr>
+  </table>
+
+  <div class="box tips">
+    <p class="judul">Tiga hal yang layak dicek tiap tutup toko</p>
+    <p><b>1.</b> Ada void tidak? Siapa yang melakukan dan alasannya apa?<br>
+       <b>2.</b> Masih ada bill terbuka? Kalau ada, berarti ada meja yang lupa ditutup.<br>
+       <b>3.</b> Ada stok minus? Berarti ada barang masuk yang belum dicatat.</p>
+  </div>
+
+  <div class="box info">
+    <p class="judul">Kenapa HPP kadang terlihat terlalu kecil</p>
+    <p>Karena hanya menu yang sudah punya resep yang ikut dihitung. Semakin lengkap resepnya, semakin akurat angka margin Anda.</p>
+  </div>
+
+  <h3>⚙️ Biaya Tetap Bulanan</h3>
+  <p>Kartu ini tempat Anda memasukkan gaji karyawan, sewa tempat, dan langganan bulanan lainnya. Tekan <b>Kelola</b> untuk membukanya.</p>
+
+  <ol class="langkah">
+    <li>Isi <b>jumlah hari buka per bulan</b>. Kalau libur seminggu sekali, isi 26. Kalau buka tiap hari, isi 30.</li>
+    <li>Tambahkan tiap pos biaya: nama (mis. <i>Gaji koki</i>, <i>Sewa tempat</i>) dan nominalnya <b>per bulan</b>.</li>
+    <li>Sistem membagi totalnya dengan hari buka, hasilnya jadi beban harian.</li>
+  </ol>
+
+  <p>Contoh: total biaya tetap Rp 25.500.000 per bulan ÷ 30 hari buka = <b>Rp 850.000 per hari</b>. Angka inilah yang muncul di halaman Kasir dan ditambahkan ke pengeluaran operasional hari itu menjadi <b>total biaya</b>.</p>
+
+  <div class="box awas">
+    <p class="judul">Kasir hanya melihat totalnya, bukan rinciannya</p>
+    <p>Rincian gaji per orang tidak pernah muncul di halaman Kasir — yang tampil hanya satu angka beban harian. Karena itu biaya tetap dikelola dari halaman Owner, bukan dari Kasir.</p>
+  </div>
+
+  <div class="box tips">
+    <p class="judul">Nonaktifkan, jangan dihapus</p>
+    <p>Kalau seorang karyawan berhenti, tekan <b>Nonaktifkan</b> — bukan Hapus. Pos yang dinonaktifkan berhenti dihitung tapi riwayatnya tetap terbaca kalau suatu saat Anda perlu menengok ke belakang.</p>
+  </div>
+
+  <div class="box ingat">
+    <p class="judul">Pembagian rata itu penyederhanaan yang disengaja</p>
+    <p>Gaji dan sewa tidak benar-benar keluar tiap hari — dibagi rata supaya Anda bisa melihat apakah omzet satu hari menutup biayanya. Untuk laporan pajak atau akuntansi resmi, tetap pakai pengeluaran yang sesungguhnya, bukan angka pembagian ini.</p>
+  </div>
+</div>

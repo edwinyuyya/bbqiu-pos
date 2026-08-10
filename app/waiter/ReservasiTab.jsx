@@ -5,6 +5,7 @@ import { STATUS, STATUS_LABEL, hariIniWIB, jamRapi, tanggalRapi } from '../../li
 import { linkWA } from '../../lib/wa';
 import CariBox from '../components/CariBox';
 import { cocok } from '../../lib/cari';
+import { urutkanMeja } from '../../lib/urutMeja';
 
 const MERCHANT = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'BBQIU';
 
@@ -29,6 +30,8 @@ export default function ReservasiTab({ reservations, tables, mejaTerpakai, reloa
     )),
     [reservations, q],
   );
+
+  const mejaAktif = useMemo(() => urutkanMeja(tables.filter((t) => t.active)), [tables]);
 
   const tableById = useMemo(
     () => Object.fromEntries(tables.map((t) => [t.id, t])),
@@ -111,7 +114,7 @@ export default function ReservasiTab({ reservations, tables, mejaTerpakai, reloa
           <select className="select" style={{ maxWidth: 220 }} value={form.table_id}
             onChange={(e) => setForm({ ...form, table_id: e.target.value })}>
             <option value="">Meja: tentukan nanti</option>
-            {tables.filter((t) => t.active).map((t) => (
+            {mejaAktif.map((t) => (
               <option key={t.id} value={t.id}>
                 Meja {t.table_number}{t.seats ? ` (${t.seats} kursi)` : ''}{t.area ? ` · ${t.area}` : ''}
               </option>
@@ -221,7 +224,7 @@ export default function ReservasiTab({ reservations, tables, mejaTerpakai, reloa
                   <select className="select" style={{ maxWidth: 220 }} value={mejaTerpilih}
                     onChange={(e) => setPilihMeja((p) => ({ ...p, [r.id]: e.target.value }))}>
                     <option value="">— Pilih meja —</option>
-                    {tables.filter((t) => t.active).map((t) => (
+                    {mejaAktif.map((t) => (
                       <option key={t.id} value={t.id}>
                         Meja {t.table_number}{t.seats ? ` (${t.seats})` : ''}
                         {mejaTerpakai[t.id] ? ' · terisi' : ''}

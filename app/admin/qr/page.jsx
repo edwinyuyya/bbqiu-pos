@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { supabaseServer } from '../../../lib/supabaseServer';
 import { getBaseUrl } from '../../../lib/baseUrl';
+import { bandingNomorMeja } from '../../../lib/urutMeja';
 import QrPrintButton from './[token]/QrPrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -13,14 +14,21 @@ export default async function QrAllPage() {
     .from('tables')
     .select('table_number, token, area, active')
     .eq('active', true)
-    .order('area', { ascending: true })
-    .order('table_number', { ascending: true });
+    .order('area', { ascending: true });
+
+  // Urutan nomor meja dirapikan di sini, bukan di query: Postgres mengurutkan
+  // teks huruf per huruf sehingga "AC 10" muncul tepat sesudah "AC 1".
+  // Area tetap jadi kunci pertama supaya label tercetak berkelompok.
+  const urut = [...(tables || [])].sort(
+    (a, b) => (a.area || '').localeCompare(b.area || '', 'id')
+      || bandingNomorMeja(a.table_number, b.table_number),
+  );
 
   const base = await getBaseUrl();
   const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran';
 
   const labels = await Promise.all(
-    (tables || []).map(async (t) => ({
+    urut.map(async (t) => ({
       table_number: t.table_number,
       area: t.area,
       qr: await QRCode.toDataURL(`${base}/menu/${t.token}`, { width: 360, margin: 1 }),

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import CariBox from '../components/CariBox';
 import { cocok } from '../../lib/cari';
+import { urutkanMeja } from '../../lib/urutMeja';
 
 const AREAS = ['Outdoor', 'Ruang AC', 'VIP'];
 
@@ -52,7 +53,7 @@ export default function TablesTab({ tables, origin, reload }) {
   const grouped = useMemo(() => {
     const byArea = {};
     for (const t of tersaring) (byArea[t.area || 'Tanpa area'] ||= []).push(t);
-    return Object.entries(byArea);
+    return Object.entries(byArea).map(([area, list]) => [area, urutkanMeja(list)]);
   }, [tersaring]);
   async function toggle(t) {
     await supabase.from('tables').update({ active: !t.active }).eq('id', t.id);

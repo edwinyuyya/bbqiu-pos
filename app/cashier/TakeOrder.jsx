@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
 import { cocok } from '../../lib/cari';
+import { urutkanMeja } from '../../lib/urutMeja';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -149,7 +150,7 @@ export default function TakeOrder({ onCreated }) {
         <div className="col" style={{ gap: 8 }}>
           <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
             <option value="">— Pilih meja —</option>
-            {tables.map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
+            {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
           </select>
           <input className="input" placeholder="Nama pelanggan (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           <div className="row">

@@ -1,26 +1,31 @@
 'use client';
 
 import { useState } from 'react';
+import CetakTermal from '../../../components/CetakTermal';
+import { strukDapur } from '../../../../lib/notaEscpos';
 
-export default function PrintControls({ jobId }) {
+export default function PrintControls({ jobId, order, stations }) {
   const [done, setDone] = useState(false);
 
-  async function printNow() {
-    window.print();
-    // Tandai print job selesai (sekali, setelah dialog cetak dibuka)
-    if (jobId && !done) {
-      setDone(true);
-      try {
-        await fetch(`/api/print-jobs/${jobId}`, { method: 'PATCH' });
-      } catch {}
-    }
+  // Print job ditandai selesai begitu perintah cetak dikirim, bukan setelah
+  // kertas keluar — tidak ada jalur balik dari printer bluetooth yang bisa
+  // memberi tahu kita cetakannya berhasil.
+  async function tandaiSelesai() {
+    if (!jobId || done) return;
+    setDone(true);
+    try { await fetch(`/api/print-jobs/${jobId}`, { method: 'PATCH' }); } catch {}
   }
 
   return (
-    <div className="between no-print">
-      <button className="btn btn-brand" onClick={printNow}>🖨️ Cetak Sekarang</button>
-      {done && <span className="badge badge-green">Ditandai dicetak</span>}
-      <button className="btn" onClick={() => window.close()}>Tutup</button>
+    <div className="no-print">
+      <CetakTermal
+        judul="Cetak Struk Dapur (58mm)"
+        buatStruk={() => { tandaiSelesai(); return strukDapur({ order, stations }); }}
+      />
+      <div className="between">
+        {done && <span className="badge badge-green">Ditandai dicetak</span>}
+        <button className="btn" onClick={() => window.close()}>Tutup</button>
+      </div>
     </div>
   );
 }

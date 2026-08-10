@@ -1,9 +1,13 @@
 'use client';
 
-export default function PrintNota() {
+import CetakTermal from '../../components/CetakTermal';
+import { notaPelanggan } from '../../../lib/notaEscpos';
+
+export default function PrintNota({ order, items, merchant, persenPajak }) {
   return (
-    <div className="no-print" style={{ textAlign: 'center', margin: '14px 0' }}>
-      <button className="btn btn-brand" onClick={() => window.print()}>🖨️ Cetak Nota (58mm)</button>
-    </div>
+    <CetakTermal
+      judul="Cetak Nota (58mm)"
+      buatStruk={() => notaPelanggan({ order, items, merchant, persenPajak })}
+    />
   );
 }

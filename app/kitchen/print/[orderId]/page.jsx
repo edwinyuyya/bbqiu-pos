@@ -83,9 +83,24 @@ export default async function PrintPage({ params, searchParams }) {
 
   const activeStations = grouped.filter((g) => g.items.length);
 
+  const statusBayar = order.payment_status === 'paid'
+    ? 'LUNAS'
+    : order.kitchen_released
+      ? 'DP (RESERVASI)'
+      : (order.payment_method === 'qris' ? 'QRIS' : 'KASIR');
+
+  // Bentuk yang sama dipakai untuk tampilan layar dan untuk perintah ESC/POS,
+  // supaya struk termal tidak pernah beda isi dengan yang terlihat di layar.
+  const untukTermal = activeStations.map((s) => ({
+    nama: s.name,
+    batchNo: cetakSemua ? null : batchCetak,
+    statusBayar,
+    kelompok: perKelompokDapur(s.items).map((g) => [g.kat, g.items]),
+  }));
+
   return (
     <div className="container-sm" style={{ paddingTop: 16 }}>
-      <PrintControls jobId={jobId} />
+      <PrintControls jobId={jobId} order={order} stations={untukTermal} />
 
       <p className="muted small no-print" style={{ marginTop: 8 }}>
         Satu dokumen ini berisi {activeStations.length} struk station — printer akan

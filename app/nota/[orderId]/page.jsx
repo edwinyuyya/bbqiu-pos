@@ -32,7 +32,12 @@ export default async function NotaPage({ params }) {
 
   return (
     <div className="container-sm" style={{ paddingTop: 16 }}>
-      <PrintNota />
+      <PrintNota
+        order={order}
+        items={items || []}
+        merchant={merchant}
+        persenPajak={taxPercent()}
+      />
       <div className="ticket">
         <BbqiuLogoMark width={150} />
         <div className="ctr small" style={{ marginTop: 2 }}>SOLO</div>

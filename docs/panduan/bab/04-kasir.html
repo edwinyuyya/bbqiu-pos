@@ -23,7 +23,8 @@
           <span class="kartu" style="flex:1;margin:0;padding:6px 9px" class="muted">Kode promo / diskon</span>
           <span class="tbl">Pakai</span>
         </div>
-        <div style="margin-top:9px"><span class="tbl hijau">Tandai Lunas</span> <span class="tbl abu">Tutup Bill</span> <span class="tbl abu">Batalkan</span></div>
+        <div style="margin-top:9px"><span class="tbl">➕ Tambah Pesanan ke Meja Ini</span></div>
+        <div style="margin-top:6px"><span class="tbl hijau">Tandai Lunas</span> <span class="tbl abu">Tutup Bill</span> <span class="tbl abu">Batalkan</span></div>
       </div>
     </div>
   </div>
@@ -47,7 +48,32 @@
   <p>Pelanggan bayar lewat QRIS di HP-nya, lalu menekan "Saya sudah bayar". Bill akan bertanda <b>🔔 Klaim bayar — cek app bank</b>.</p>
   <p><b>Itu belum berarti lunas.</b> Cek mutasi di aplikasi bank dulu. Kalau uangnya benar masuk, baru tekan <b>Tandai Lunas</b>.</p>
 
-  <h4>C. Menu habis — batalkan satu item</h4>
+  <h4>C. Tamu menambah pesanan di tengah makan</h4>
+  <p>Ini yang paling sering terjadi. <b>Jangan buat order baru</b> — pakai tombol di kartu billnya.</p>
+  <ol class="langkah">
+    <li>Cari tagihan mejanya di tab <b>Aktif</b>.</li>
+    <li>Tekan <b>➕ Tambah Pesanan ke Meja Ini</b> (tombol paling atas di kartu itu).</li>
+    <li>Layar pilih menu terbuka dengan <b>meja sudah terkunci</b> — tidak perlu dan tidak bisa dipilih ulang.</li>
+    <li>Ketuk menunya, lalu tekan <b>Tambahkan ke Bill</b>.</li>
+    <li>Cetak struk dapur dari layar yang muncul.</li>
+  </ol>
+
+  <div class="box tips">
+    <p class="judul">Struk dapur hanya memuat tambahannya</p>
+    <p>Yang tercetak cuma pesanan tambahan ini, bukan seluruh isi bill — dapur tidak akan memasak ulang yang tadi sudah jadi. Di kepala struk tertulis <b>PESANAN TAMBAHAN ke-2</b> (atau ke-3, dan seterusnya).</p>
+  </div>
+
+  <div class="box awas">
+    <p class="judul">Kenapa mejanya dikunci</p>
+    <p>Salah meja di sini berarti tagihan menempel ke tamu lain, dan biasanya baru ketahuan saat tamu itu mau bayar. Karena itu tombol ini selalu menempel pada bill yang Anda tekan, bukan pada meja yang Anda pilih.</p>
+  </div>
+
+  <h4>C1. Kalau billnya sudah terlanjur ditandai lunas</h4>
+  <p>Tombolnya tetap bisa dipakai, dan akan muncul peringatan kuning. Setelah tambahannya disimpan, status bill <b>kembali jadi belum bayar</b> dan muncul tanda:</p>
+  <p><span class="lencana l-kuning">💵 Sudah bayar Rp 230.450 · tagih sisa Rp 45.000</span></p>
+  <p>Jadi Anda hanya perlu menagih <b>selisihnya</b> — bukan menghitung ulang dari nol, dan bukan pula melewatkannya.</p>
+
+  <h4>D. Menu habis — batalkan satu item</h4>
   <ol class="langkah">
     <li>Tekan tombol <b>✖</b> di baris menu yang habis.</li>
     <li>Isi alasannya, misalnya <i>bahan habis</i>.</li>
@@ -57,24 +83,24 @@
 </div>
 
 <div class="page">
-  <h4>D. Membatalkan seluruh tagihan (void)</h4>
+  <h4>E. Membatalkan seluruh tagihan (void)</h4>
   <p>Hanya untuk kasus pelanggan batal total. Wajib isi alasan, nama petugas, <b>dan foto wajah</b>. Ini pengaman anti-kecurangan, bukan formalitas.</p>
   <div class="box awas">
     <p class="judul">Jangan pakai void untuk membatalkan satu menu</p>
     <p>Kalau cuma satu menu yang habis, pakai tombol ✖ per item. Void seluruh bill menghapus semua data pesanan dan harus input ulang dari nol.</p>
   </div>
 
-  <h4>E. Menutup tagihan</h4>
+  <h4>F. Menutup tagihan</h4>
   <p>Setelah pelanggan selesai dan sudah bayar, tekan <b>Tutup Bill</b>. Mejanya otomatis dianggap kosong dan bisa dipakai tamu berikutnya.</p>
   <div class="box awas">
     <p class="judul">Bill yang lupa ditutup bikin meja "terisi" selamanya</p>
     <p>Sistem antrian menghitung meja terisi dari bill yang masih terbuka. Kalau lupa menutup, meja itu tidak akan pernah ditawarkan ke antrian meski fisiknya kosong. Biasakan tutup bill begitu pelanggan pergi.</p>
   </div>
 
-  <h4>F. Input pesanan manual</h4>
+  <h4>G. Input pesanan manual</h4>
   <p>Untuk pelanggan yang tidak mau atau tidak bisa scan QR. Buka tab <b>Input Order</b>, pilih meja, cari menu lewat kotak pencarian, lalu tekan Buat Order. Fungsinya sama persis dengan pesanan lewat QR.</p>
 
-  <h4>G. Mencari nota lama</h4>
+  <h4>H. Mencari nota lama</h4>
   <p>Di atas daftar bill ada kotak pencarian. Bisa dicari dari <b>nomor nota, nomor meja, nama pemesan, atau isi pesanannya</b> — tamu biasanya ingat salah satu dari itu, bukan nomor notanya.</p>
   <p>Tiap kartu bill juga menampilkan waktunya: <b>Hari ini 19:32</b>, <b>Kemarin 21:05</b>, atau tanggal lengkap untuk nota yang lebih lama. Pakai itu saat mencocokkan nota dengan setoran.</p>
 
@@ -89,6 +115,8 @@
     <tr><td><span class="lencana l-kuning">Belum bayar</span></td><td>Belum ada uang diterima.</td></tr>
     <tr><td><span class="lencana l-hijau">Lunas</span></td><td>Sudah dibayar penuh. Tinggal tekan Tutup Bill saat tamu pergi.</td></tr>
     <tr><td><span class="lencana l-kuning">🔔 Klaim bayar</span></td><td>Pelanggan mengaku sudah transfer. <b>Cek mutasi dulu</b> sebelum menandai lunas.</td></tr>
+    <tr><td><span class="lencana l-kuning">💵 Sudah bayar … tagih sisa …</span></td>
+        <td>Bill ini sudah dibayar, lalu tamunya menambah pesanan. Tagih <b>sisanya saja</b>, sesuai angka di badge.</td></tr>
     <tr><td><span class="lencana l-kuning">📅 Reservasi ber-DP</span></td><td>Tamu reservasi yang sudah bayar DP. Sisa tagihannya tertulis di badge itu.</td></tr>
   </table>
 

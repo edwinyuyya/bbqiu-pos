@@ -9,7 +9,8 @@ function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
 const UKURAN = [
   { id: '90', kelas: 'label-90', nama: '90 × 55 mm', ket: 'seukuran kartu nama · 10 per lembar A4', perBaris: 2 },
-  { id: '60', kelas: 'label-60', nama: '60 × 40 mm', ket: 'nampan kecil & sate · 21 per lembar A4', perBaris: 3 },
+  { id: '59', kelas: 'label-59', nama: '59 × 42 mm', ket: 'ukuran sticker · 18 per lembar A4', perBaris: 3 },
+  { id: '60', kelas: 'label-60', nama: '60 × 40 mm', ket: 'nampan kecil & sate · 18 per lembar A4', perBaris: 3 },
 ];
 
 // Satu label untuk satu menu. Harga sengaja jadi elemen terbesar: pelanggan

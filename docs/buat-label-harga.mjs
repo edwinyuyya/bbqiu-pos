@@ -38,9 +38,13 @@ function aman(s) {
 
 // Susunan yang pas di A4 tanpa memaksa; sisa tepi dipakai sebagai jarak aman
 // mesin cetak, yang hampir selalu tidak bisa mencetak sampai ujung kertas.
+// jarak = sela antar label dalam mm. Kalau memakai kertas label pracetak
+// (die-cut), sela ini WAJIB disamakan dengan sela pada kertasnya — kalau
+// tidak, cetakan meleset makin jauh di baris-baris bawah.
 const UKURAN = {
   '90x55': { kelas: 'label-90', kolom: 2, baris: 5, jarak: 2, berkas: 'Label-Harga-90x55.pdf' },
   '60x40': { kelas: 'label-60', kolom: 3, baris: 6, jarak: 3, berkas: 'Label-Harga-60x40.pdf' },
+  '59x42': { kelas: 'label-59', kolom: 3, baris: 6, jarak: 3, berkas: 'Label-Harga-59x42.pdf' },
 };
 
 function satuLabel(item, kelas) {

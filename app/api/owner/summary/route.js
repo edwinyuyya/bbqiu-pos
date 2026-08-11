@@ -147,6 +147,31 @@ export async function GET(req) {
     })),
   };
 
+  // Susut produksi (serpihan potong). Dipisah dari waste karena sifatnya beda:
+  // serpihan itu biaya wajar yang selalu ada, sedangkan waste adalah barang
+  // rusak. Kalau digabung, laporan barang rusak berhenti berarti "ada yang
+  // ceroboh" dan orang berhenti memperhatikannya.
+  const { data: susutRaw } = await db
+    .from('stock_movements')
+    .select('qty, note, created_at, inventory_items(name, unit, cost_price)')
+    .gte('created_at', startISO)
+    .eq('type', 'susut_produksi')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const susutList = susutRaw || [];
+  const susutProduksi = {
+    count: susutList.length,
+    value: susutList.reduce((s, w) => s + Number(w.qty) * Number(w.inventory_items?.cost_price || 0), 0),
+    list: susutList.slice(0, 15).map((w) => ({
+      name: w.inventory_items?.name || '-',
+      qty: Number(w.qty),
+      unit: w.inventory_items?.unit || '',
+      value: Number(w.qty) * Number(w.inventory_items?.cost_price || 0),
+      note: w.note,
+      at: w.created_at,
+    })),
+  };
+
   // kinerja dapur (durasi order masuk -> diklik selesai)
   const { data: perfRaw } = await db
     .from('kitchen_perf_log')
@@ -197,5 +222,6 @@ export async function GET(req) {
     closures,
     kitchen_perf: kitchenPerf,
     waste,
+    susut_produksi: susutProduksi,
   });
 }

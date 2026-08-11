@@ -258,6 +258,14 @@ alter table inventory_items add column if not exists expiry_date date;
 alter table inventory_items add column if not exists received_date date;
 alter table inventory_items add column if not exists shelf_life_days numeric;
 
+-- type: 'in' (masuk) | 'out' (dipakai) | 'waste' (rusak/susut) |
+--       'opname' (penyesuaian hitung fisik) | 'susut_produksi' (serpihan potong)
+--
+-- 'susut_produksi' SENGAJA dipisah dari 'waste'. Serpihan potong adalah biaya
+-- wajar yang selalu ada; barang rusak adalah kelalaian. Kalau dicampur,
+-- laporan barang rusak berhenti berarti apa-apa dan orang berhenti melihatnya.
+-- Gerakan 'susut_produksi' TIDAK mengurangi stok — jumlahnya sudah termasuk
+-- dalam gerakan 'out' produksi yang bersangkutan.
 create table if not exists stock_movements (
   id          uuid default gen_random_uuid() primary key,
   item_id     uuid references inventory_items(id) on delete cascade,

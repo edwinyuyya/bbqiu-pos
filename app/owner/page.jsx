@@ -183,6 +183,31 @@ function OwnerInner() {
             </div>
           )}
 
+          {data.susut_produksi && data.susut_produksi.count > 0 && (
+            <div className="card" style={{ marginTop: 12 }}>
+              <div className="between" style={{ marginBottom: 10 }}>
+                <div className="h2">✂️ Susut Produksi (serpihan potong)</div>
+                <span className="badge badge-amber">{data.susut_produksi.count}× · {rupiah(data.susut_produksi.value)}</span>
+              </div>
+              <p className="muted small" style={{ marginTop: -4 }}>
+                Biaya wajar, bukan kerugian — tulang, lemak, dan ujung potongan yang
+                memang tidak terpakai. Yang perlu dicurigai kalau angkanya naik terus
+                pada bahan yang sama.
+              </p>
+              <div className="col" style={{ gap: 6 }}>
+                {data.susut_produksi.list.map((w, i) => (
+                  <div key={i} className="between small" style={{ borderBottom: '1px solid var(--line)', paddingBottom: 5 }}>
+                    <div>
+                      <div>{w.qty} {w.unit} {w.name}</div>
+                      <div className="muted">{jamWIB(w.at)}</div>
+                    </div>
+                    <span className="bold" style={{ whiteSpace: 'nowrap' }}>{rupiah(w.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {data.voids && (
             <div className="card" style={{ marginTop: 12, borderColor: data.voids.count ? 'var(--red)' : 'var(--line)' }}>
               <div className="between" style={{ marginBottom: 10 }}>

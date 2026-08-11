@@ -49,6 +49,10 @@ function CatatProduksi({ items, reload }) {
   const [porsi, setPorsi] = useState('');
   const [qty, setQty] = useState('');
   const [note, setNote] = useState('');
+  // Pemakaian nyata & serpihan, per bahan mentah. Dikosongkan = ikut resep.
+  const [pakai, setPakai] = useState({});     // input_item_id -> jumlah dipakai
+  const [susut, setSusut] = useState({});     // input_item_id -> serpihan terbuang
+  const [rendemen, setRendemen] = useState(null);
   const [resep, setResep] = useState(null);   // resep bahan jadi terpilih
   const [menus, setMenus] = useState([]);     // menu yang memakai bahan ini
   const [memuat, setMemuat] = useState(false);
@@ -60,7 +64,7 @@ function CatatProduksi({ items, reload }) {
   const itemById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
 
   useEffect(() => {
-    setMenuId(''); setPorsi(''); setQty('');
+    setMenuId(''); setPorsi(''); setQty(''); setPakai({}); setSusut({}); setRendemen(null);
     if (!outputId) { setResep(null); setMenus([]); return; }
     setMemuat(true);
     fetch(`/api/production?output=${outputId}`)
@@ -96,19 +100,26 @@ function CatatProduksi({ items, reload }) {
       const catatan = cara === 'porsi' && menu
         ? [`${angka(Number(porsi))} porsi ${menu.name}`, note].filter(Boolean).join(' — ')
         : note;
+      const bersih = (obj) => Object.fromEntries(
+        Object.entries(obj).filter(([, v]) => Number(v) > 0).map(([k, v]) => [k, Number(v)])
+      );
       const r = await fetch('/api/production', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ output_item_id: outputId, qty: jumlah, note: catatan }),
+        body: JSON.stringify({
+          output_item_id: outputId, qty: jumlah, note: catatan,
+          pakai: bersih(pakai), susut: bersih(susut),
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Gagal menyimpan produksi');
+      setRendemen(d.rendemen || null);
       setPesan(
         `✓ ${angka(jumlah)} ${output?.unit} ${output?.name} ditambahkan` +
         (cara === 'porsi' && menu ? ` (= ${angka(Number(porsi))} porsi ${menu.name})` : '') +
         (d.dipakai?.length ? `, ${d.dipakai.length} bahan mentah berkurang` : '')
       );
-      setPorsi(''); setQty(''); setNote('');
+      setPorsi(''); setQty(''); setNote(''); setPakai({}); setSusut({});
       await reload();
       setTimeout(() => setPesan(''), 8000);
     } catch (e) { setError(e.message); }
@@ -217,21 +228,86 @@ function CatatProduksi({ items, reload }) {
             )}
             {!memuat && (resep || []).map((r) => {
               const bahan = itemById[r.input_item_id];
-              const pakai = Number(r.qty) * jumlah;
-              const kurang = bahan && Number(bahan.stock_qty) < pakai;
+              if (!bahan) return null;
+              const perkiraan = Number(r.qty) * jumlah;
+              const nyata = Number(pakai[bahan.id]) > 0 ? Number(pakai[bahan.id]) : perkiraan;
+              const buang = Number(susut[bahan.id]) || 0;
+              const kurang = Number(bahan.stock_qty) < nyata;
+              const beda = nyata - perkiraan;
               return (
-                <div key={r.id} className="between small" style={{ marginBottom: 4 }}>
-                  <span>{bahan?.name || '(bahan terhapus)'}</span>
-                  <span>
-                    <b>− {angka(pakai)} {bahan?.unit}</b>
-                    {bahan && (
+                <div key={r.id} style={{ marginBottom: 10 }}>
+                  <div className="between small">
+                    <span className="bold">{bahan.name}</span>
+                    <span>
+                      <b>− {angka(nyata)} {bahan.unit}</b>
                       <span className="muted"> · sisa {angka(bahan.stock_qty)}</span>
-                    )}
-                    {kurang && <span className="badge badge-amber" style={{ marginLeft: 6, fontSize: 10 }}>kurang</span>}
-                  </span>
+                      {kurang && <span className="badge badge-amber" style={{ marginLeft: 6, fontSize: 10 }}>kurang</span>}
+                    </span>
+                  </div>
+                  <div className="row" style={{ marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
+                    <label className="muted small" style={{ flex: 1, minWidth: 130 }}>
+                      Dipakai sebenarnya ({bahan.unit})
+                      <input className="input" style={{ padding: '6px 9px', fontSize: 13 }}
+                        inputMode="decimal" placeholder={`resep: ${angka(perkiraan)}`}
+                        value={pakai[bahan.id] ?? ''}
+                        onChange={(e) => setPakai((p) => ({ ...p, [bahan.id]: e.target.value }))} />
+                    </label>
+                    <label className="muted small" style={{ flex: 1, minWidth: 130 }}>
+                      Serpihan terbuang ({bahan.unit})
+                      <input className="input" style={{ padding: '6px 9px', fontSize: 13 }}
+                        inputMode="decimal" placeholder="0"
+                        value={susut[bahan.id] ?? ''}
+                        onChange={(e) => setSusut((p) => ({ ...p, [bahan.id]: e.target.value }))} />
+                    </label>
+                  </div>
+                  {Math.abs(beda) > 0.001 && (
+                    <p className="small" style={{ margin: '3px 0 0', color: beda > 0 ? '#9a6b06' : '#16794a' }}>
+                      {beda > 0 ? '+' : ''}{angka(Math.round(beda * 1000) / 1000)} {bahan.unit} dari perkiraan resep
+                      ({angka(perkiraan)}).
+                    </p>
+                  )}
+                  {buang > 0 && nyata > 0 && (
+                    <p className="muted small" style={{ margin: '2px 0 0' }}>
+                      Serpihan {angka(buang)} {bahan.unit} = {Math.round((buang / nyata) * 1000) / 10}% dari yang dipakai.
+                    </p>
+                  )}
                 </div>
               );
             })}
+            {!memuat && (resep || []).length > 0 && (
+              <p className="muted small" style={{ margin: '4px 0 0' }}>
+                Kolom <b>dipakai sebenarnya</b> boleh dikosongkan kalau sesuai resep.
+                <b> Serpihan</b> adalah bagian dari yang dipakai, bukan tambahan — jadi
+                stok tidak dipotong dua kali.
+              </p>
+            )}
+          </div>
+        )}
+
+        {rendemen && (
+          <div className="card" style={{ marginTop: 12, borderColor: 'var(--brand)' }}>
+            <div className="bold small" style={{ marginBottom: 6 }}>📐 Rendemen produksi barusan</div>
+            <div className="between small"><span className="muted">{rendemen.bahan} dipakai</span>
+              <b>{angka(rendemen.dipakai)}</b></div>
+            <div className="between small"><span className="muted">Jadi hasil</span>
+              <b>{angka(rendemen.hasil)}</b></div>
+            {rendemen.susut > 0 && (
+              <div className="between small"><span className="muted">Serpihan terbuang</span>
+                <b>{angka(rendemen.susut)}</b></div>
+            )}
+            <div className="between small" style={{ marginTop: 4 }}>
+              <span className="muted">Rendemen</span><b>{rendemen.persen}%</b>
+            </div>
+            <hr className="hr" />
+            <p className="small" style={{ margin: 0 }}>
+              Takaran sebenarnya kali ini: <b>{angka(rendemen.takaran_sebenarnya)}</b> bahan
+              mentah per 1 hasil. Kalau angka ini terus muncul beda dari resep, ubah
+              takarannya di <b>⚙️ Atur Resep Produksi</b> supaya perkiraan stok makin tepat.
+            </p>
+            <p className="muted small" style={{ margin: '6px 0 0' }}>
+              Jangan diubah hanya karena sekali meleset — tunggu tiga sampai lima kali
+              produksi dan pakai angka yang paling sering muncul.
+            </p>
           </div>
         )}
 
@@ -260,6 +336,12 @@ function AturResep({ items }) {
   const [resep, setResep] = useState([]);
   const [inputId, setInputId] = useState('');
   const [qty, setQty] = useState('1');
+  // Dua cara mengetik takaran yang sama. "bagi" untuk bahan yang dipotong jadi
+  // beberapa bagian (1 bakso jadi 2), "butuh" untuk bahan yang menyusut saat
+  // diolah (1,15 gram gelondongan jadi 1 gram potongan). Menyuruh staf
+  // menghitung sendiri 1÷2 = 0,5 hanya mengundang salah ketik.
+  const [cara, setCara] = useState('butuh');  // butuh | bagi
+  const [bagi, setBagi] = useState('2');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -274,21 +356,27 @@ function AturResep({ items }) {
   }
   useEffect(() => { muat(outputId); }, [outputId]);
 
+  // Takaran yang disimpan selalu "bahan mentah per 1 hasil", apa pun cara
+  // mengetiknya. Satu bentuk penyimpanan, dua cara memasukkan.
+  const takaran = cara === 'bagi'
+    ? (Number(bagi) > 0 ? Math.round((1 / Number(bagi)) * 100000) / 100000 : 0)
+    : Number(qty);
+
   async function tambah() {
     setError('');
     if (!outputId || !inputId) return setError('Pilih bahan hasil dan bahan mentahnya.');
     if (outputId === inputId) return setError('Bahan hasil dan bahan mentah tidak boleh sama.');
-    if (!(Number(qty) > 0)) return setError('Takaran harus lebih dari 0.');
+    if (!(takaran > 0)) return setError('Takaran harus lebih dari 0.');
     setBusy(true);
     try {
       const r = await fetch('/api/production/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ output_item_id: outputId, input_item_id: inputId, qty: Number(qty) }),
+        body: JSON.stringify({ output_item_id: outputId, input_item_id: inputId, qty: takaran }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Gagal menyimpan');
-      setInputId(''); setQty('1');
+      setInputId(''); setQty('1'); setBagi('2');
       await muat(outputId);
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
@@ -347,17 +435,48 @@ function AturResep({ items }) {
                 value={inputId} onChange={setInputId}
                 placeholder="Cari bahan mentah…"
               />
-              <input className="input" style={{ maxWidth: 120 }} inputMode="decimal"
-                placeholder="Takaran" value={qty} onChange={(e) => setQty(e.target.value)} />
+              {cara === 'butuh' ? (
+                <input className="input" style={{ maxWidth: 120 }} inputMode="decimal"
+                  placeholder="Takaran" value={qty} onChange={(e) => setQty(e.target.value)} />
+              ) : (
+                <input className="input" style={{ maxWidth: 120 }} inputMode="decimal"
+                  placeholder="Jadi berapa" value={bagi} onChange={(e) => setBagi(e.target.value)} />
+              )}
               <button className="btn btn-brand" disabled={busy} onClick={tambah}>Tambah</button>
             </div>
+
+            <div className="row" style={{ marginTop: 8, flexWrap: 'wrap' }}>
+              <button className={`chip ${cara === 'butuh' ? 'chip-on' : ''}`} onClick={() => setCara('butuh')}>
+                Butuh ___ bahan untuk 1 hasil
+              </button>
+              <button className={`chip ${cara === 'bagi' ? 'chip-on' : ''}`} onClick={() => setCara('bagi')}>
+                1 bahan dibagi jadi ___
+              </button>
+            </div>
+
+            {inputId && takaran > 0 && (
+              <p className="small" style={{ marginTop: 6 }}>
+                {cara === 'bagi'
+                  ? <>1 {itemById[inputId]?.unit} <b>{itemById[inputId]?.name}</b> dibagi jadi{' '}
+                      <b>{angka(Number(bagi))}</b> {output?.unit} {output?.name}.</>
+                  : <>Butuh <b>{angka(Number(qty))}</b> {itemById[inputId]?.unit}{' '}
+                      <b>{itemById[inputId]?.name}</b> untuk 1 {output?.unit} {output?.name}.</>}
+                <span className="muted"> Tersimpan sebagai takaran {angka(takaran)}.</span>
+              </p>
+            )}
+
             {error && <p className="small" style={{ color: '#ff8585', marginTop: 8 }}>{error}</p>}
 
             <div className="card" style={{ marginTop: 12 }}>
               <p className="muted small" style={{ margin: 0 }}>
-                <b>Contoh mengisi susut potong:</b> kalau 1.150 gram daging gelondongan
-                menghasilkan 1.000 gram potongan siap pakai, isi takarannya <b>1,15</b> —
-                sisanya tulang dan lemak yang terbuang.
+                <b>Bahan menyusut saat diolah</b> — pakai “Butuh ___ untuk 1 hasil”.
+                Kalau 1.150 gram daging gelondongan menghasilkan 1.000 gram potongan
+                siap pakai, isi <b>1,15</b>; sisanya tulang dan lemak yang terbuang.
+              </p>
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                <b>Bahan dipotong jadi beberapa bagian</b> — pakai “1 bahan dibagi jadi ___”.
+                Bakso sapi beku dibelah dua, isi <b>2</b>. Beef patty dipotong empat,
+                isi <b>4</b>. Sistem yang menghitung takarannya.
               </p>
             </div>
           </>

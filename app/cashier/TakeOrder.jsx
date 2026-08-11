@@ -134,7 +134,7 @@ function PilihVarian({ item, onTambah, onTutup }) {
 // atau tambahan order ke meja yang sudah jalan. Pakai endpoint POST /api/orders
 // yang SAMA dengan yang dipakai halaman menu pelanggan (potong stok resep,
 // hitung QRIS dinamis, dsb sudah otomatis ikut, tidak perlu logic baru).
-export default function TakeOrder({ onCreated }) {
+export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah }) {
   const [tables, setTables] = useState([]);
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
@@ -168,6 +168,13 @@ export default function TakeOrder({ onCreated }) {
       setLoading(false);
     })();
   }, []);
+
+  // Datang dari tombol "Tambah Pesanan" di kartu bill: mejanya sudah pasti,
+  // jadi langsung dipilihkan. Menunggu daftar meja selesai dimuat, kalau tidak
+  // pilihannya tertimpa nilai kosong.
+  useEffect(() => {
+    if (tambahKe?.table_id && tables.length) setTableId(tambahKe.table_id);
+  }, [tambahKe, tables]);
 
   const itemById = useMemo(() => Object.fromEntries(menuItems.map((i) => [i.id, i])), [menuItems]);
 
@@ -257,6 +264,9 @@ export default function TakeOrder({ onCreated }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: table.token,
+          // Kalau menambah ke bill tertentu, tunjuk billnya langsung supaya
+          // tidak tertebak salah oleh sistem.
+          order_id: tambahKe?.id || undefined,
           customer_name: customerName,
           payment_method: payment,
           items: cartLines.map((l) => ({
@@ -283,8 +293,18 @@ export default function TakeOrder({ onCreated }) {
   if (result) {
     return (
       <div className="card" style={{ maxWidth: 480, borderColor: 'var(--green)' }}>
-        <div className="h2" style={{ color: '#16794a' }}>✓ Order #{result.order_no} dibuat</div>
-        <p className="muted small" style={{ marginTop: 6 }}>Meja {result.table_number} · Total {rupiah(total)}</p>
+        <div className="h2" style={{ color: '#16794a' }}>
+          {tambahKe ? `✓ Ditambahkan ke bill #${result.order_no}` : `✓ Order #${result.order_no} dibuat`}
+        </div>
+        <p className="muted small" style={{ marginTop: 6 }}>
+          Meja {result.table_number} · {tambahKe ? 'tambahan' : 'total'} {rupiah(total)}
+        </p>
+        {tambahKe && (
+          <p className="small" style={{ marginTop: 4 }}>
+            Cetak struk dapur di bawah — yang tercetak hanya pesanan tambahan ini,
+            bukan seluruh isi bill.
+          </p>
+        )}
         <div className="col" style={{ gap: 8, marginTop: 10 }}>
           <Link href={`/order/${result.order_id}`} target="_blank" className="btn btn-brand btn-block">Buka Halaman Order (QRIS/status)</Link>
           <Link href={`/kitchen/print/${result.order_id}`} target="_blank" className="btn btn-block">🖨️ Struk Dapur</Link>
@@ -426,15 +446,39 @@ export default function TakeOrder({ onCreated }) {
             )}
           </div>
 
-          <div className="card" style={{ padding: 12 }}>
+          <div className="card" style={{ padding: 12, borderColor: tambahKe ? 'var(--brand)' : undefined }}>
+            {tambahKe && (
+              <div style={{ marginBottom: 10 }}>
+                <div className="bold">➕ Tambahan untuk bill #{tambahKe.order_no}</div>
+                <div className="muted small">
+                  Meja {tambahKe.table_number} · masuk ke tagihan yang sama, bukan bill baru
+                </div>
+                {tambahKe.paid && (
+                  <p className="small" style={{ margin: '6px 0 0', color: '#9a6b06' }}>
+                    ⚠ Bill ini sudah ditandai <b>lunas</b>. Tambahan ini akan membuat
+                    tagihannya bertambah lagi — tagih selisihnya sebelum tamu pulang.
+                  </p>
+                )}
+                {onBatalTambah && (
+                  <button className="btn" style={{ padding: '4px 10px', fontSize: 13, marginTop: 6 }}
+                    onClick={onBatalTambah}>Batal, buat order baru saja</button>
+                )}
+              </div>
+            )}
             <div className="col" style={{ gap: 8 }}>
-              <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
-                <option value="">— Pilih meja —</option>
-                {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
-              </select>
+              {/* Saat menambah ke bill tertentu, mejanya tidak boleh diganti —
+                  salah meja di sini berarti tagihan menempel ke tamu lain. */}
+              {tambahKe ? (
+                <div className="input" style={{ opacity: 0.75 }}>Meja {tambahKe.table_number}</div>
+              ) : (
+                <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
+                  <option value="">— Pilih meja —</option>
+                  {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
+                </select>
+              )}
               <input className="input" placeholder="Nama pelanggan (opsional)"
                 value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-              <div className="row">
+              <div className="row" style={tambahKe ? { display: 'none' } : undefined}>
                 <label className={`btn ${payment === 'cashier' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
                   <input type="radio" style={{ display: 'none' }} checked={payment === 'cashier'} onChange={() => setPayment('cashier')} />
                   Bayar di Kasir
@@ -450,7 +494,9 @@ export default function TakeOrder({ onCreated }) {
 
             <button className="btn btn-brand btn-block" style={{ marginTop: 10 }}
               disabled={submitting || !cartLines.length} onClick={submit}>
-              {submitting ? 'Memproses…' : `Buat Order · ${rupiah(total)}`}
+              {submitting
+                ? 'Memproses…'
+                : `${tambahKe ? 'Tambahkan ke Bill' : 'Buat Order'} · ${rupiah(total)}`}
             </button>
           </div>
         </div>

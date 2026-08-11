@@ -155,6 +155,28 @@ export async function POST(req) {
       .eq('status', 'scheduled')
       .maybeSingle();
     billBerjalan = data || null;
+  } else if (b.order_id) {
+    // Kasir menekan "Tambah Pesanan" pada bill tertentu. Di sini billnya sudah
+    // ditunjuk, jadi jangan menebak-nebak lagi — termasuk kalau billnya sudah
+    // ditandai lunas. Tamu yang sudah bayar lalu memesan lagi tetap harus
+    // menempel ke bill yang sama; membuat bill kedua diam-diam membuat kasir
+    // menagih dua kali dan meja terlihat punya dua tagihan.
+    const { data } = await db
+      .from('orders')
+      .select('*')
+      .eq('id', b.order_id)
+      .in('status', ['open', 'preparing', 'served'])
+      .maybeSingle();
+    if (!data) {
+      return NextResponse.json(
+        { error: 'Bill yang dituju sudah ditutup atau dibatalkan. Buat order baru.' },
+        { status: 409 },
+      );
+    }
+    if (data.table_id !== table.id) {
+      return NextResponse.json({ error: 'Bill ini bukan milik meja tersebut.' }, { status: 400 });
+    }
+    billBerjalan = data;
   } else {
     const { data } = await db
       .from('orders')
@@ -207,6 +229,16 @@ export async function POST(req) {
       // Pra-pesanan tetap 'scheduled' sampai tamunya benar-benar datang.
       status: billBerjalan.status === 'served' ? 'open' : billBerjalan.status,
     };
+    // Bill yang sudah lunas lalu ditambahi pesanan: totalnya naik, tapi
+    // uangnya belum diterima untuk selisihnya. Kalau statusnya dibiarkan
+    // "Lunas", kasir akan menutup bill tanpa menagih tambahannya. Jadi
+    // dikembalikan ke belum-bayar, dengan uang yang sudah masuk disimpan di
+    // paid_amount supaya yang perlu ditagih hanya selisihnya.
+    if (billBerjalan.payment_status === 'paid') {
+      patch.payment_status = 'unpaid';
+      patch.paid_amount = Number(billBerjalan.paid_amount || billBerjalan.total || 0);
+    }
+
     if (!billBerjalan.customer_name && customer_name)
       patch.customer_name = customer_name.toString().slice(0, 80);
     if (note) {

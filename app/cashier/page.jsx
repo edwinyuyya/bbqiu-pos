@@ -103,6 +103,8 @@ function CashierPage() {
   const [items, setItems] = useState({});
   const [tab, setTab] = useState('active'); // active | closed
   const [cariBill, setCariBill] = useState('');
+  // Bill yang sedang ditambahi pesanan dari tab Input Order.
+  const [tambahKe, setTambahKe] = useState(null); // { table_id, order_no, table_number }
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
@@ -354,7 +356,8 @@ function CashierPage() {
 
       <div className="row" style={{ marginBottom: 14 }}>
         <button className={`btn ${mainTab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setMainTab('bill')}>🧾 Bill</button>
-        <button className={`btn ${mainTab === 'takeorder' ? 'btn-brand' : ''}`} onClick={() => setMainTab('takeorder')}>➕ Input Order</button>
+        <button className={`btn ${mainTab === 'takeorder' ? 'btn-brand' : ''}`}
+          onClick={() => { setTambahKe(null); setMainTab('takeorder'); }}>➕ Input Order</button>
         <button className={`btn ${mainTab === 'omzet' ? 'btn-brand' : ''}`} onClick={() => setMainTab('omzet')}>📊 Omzet &amp; Biaya</button>
         <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Pengeluaran</button>
       </div>
@@ -368,7 +371,13 @@ function CashierPage() {
 
       {mainTab === 'omzet' && <OmzetTab />}
       {mainTab === 'pettycash' && <PettyCashTab />}
-      {mainTab === 'takeorder' && <TakeOrder onCreated={() => setMainTab('bill')} />}
+      {mainTab === 'takeorder' && (
+        <TakeOrder
+          tambahKe={tambahKe}
+          onCreated={() => { setTambahKe(null); setMainTab('bill'); load(); }}
+          onBatalTambah={() => setTambahKe(null)}
+        />
+      )}
 
       {mainTab === 'bill' && (
       <>
@@ -416,7 +425,16 @@ function CashierPage() {
                 )}
                 {!paid && o.kitchen_released && o.status !== 'cancelled' && (
                   <span className="badge badge-amber">
-                    📅 Reservasi ber-DP · dapur jalan, sisa {rupiah(Math.max(0, Number(o.total) - Number(o.paid_amount || 0)))}
+                    📅 Reservasi ber-DP · sisa {rupiah(Math.max(0, Number(o.total) - Number(o.paid_amount || 0)))}
+                  </span>
+                )}
+                {/* Bill yang tadinya lunas lalu ditambahi pesanan. Tanpa tanda
+                    ini kasir menagih ulang dari nol, atau malah tidak menagih
+                    selisihnya sama sekali. */}
+                {!paid && !o.kitchen_released && Number(o.paid_amount) > 0 && o.status !== 'cancelled' && (
+                  <span className="badge badge-amber">
+                    💵 Sudah bayar {rupiah(o.paid_amount)} · tagih sisa{' '}
+                    {rupiah(Math.max(0, Number(o.total) - Number(o.paid_amount)))}
                   </span>
                 )}
                 {o.customer_name && <span className="muted small">{o.customer_name}</span>}
@@ -516,6 +534,24 @@ function CashierPage() {
 
               {tab === 'active' && (
                 <div className="col no-print" style={{ marginTop: 12, gap: 8 }}>
+                  {/* Tamu paling sering menambah pesanan di tengah makan. Tanpa
+                      tombol ini kasir harus pindah tab lalu mencari mejanya
+                      lagi dari daftar — dua langkah yang gampang salah meja. */}
+                  <button
+                    className="btn btn-block"
+                    onClick={() => {
+                      setTambahKe({
+                        id: o.id,
+                        paid,
+                        table_id: o.table_id,
+                        order_no: o.order_no,
+                        table_number: o.table_number,
+                      });
+                      setMainTab('takeorder');
+                    }}
+                  >
+                    ➕ Tambah Pesanan ke Meja Ini
+                  </button>
                   {!paid && (
                     <button className="btn btn-green btn-block" disabled={busy === o.id} onClick={() => patch(o.id, { payment_status: 'paid' })}>
                       Tandai Lunas

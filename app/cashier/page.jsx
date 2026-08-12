@@ -7,6 +7,7 @@ import PinGate from '../components/PinGate';
 import FaceCapture from '../components/FaceCapture';
 import CariBox from '../components/CariBox';
 import TakeOrder from './TakeOrder';
+import PindahMeja from './PindahMeja';
 import OmzetTab from './OmzetTab';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 import { cocok } from '../../lib/cari';
@@ -105,6 +106,7 @@ function CashierPage() {
   const [cariBill, setCariBill] = useState('');
   // Bill yang sedang ditambahi pesanan dari tab Input Order.
   const [tambahKe, setTambahKe] = useState(null); // { table_id, order_no, table_number }
+  const [pindah, setPindah] = useState(null);    // bill yang sedang dipindah mejanya
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
@@ -362,6 +364,18 @@ function CashierPage() {
         <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Pengeluaran</button>
       </div>
 
+      {pindah && (
+        <PindahMeja
+          order={pindah}
+          onTutup={() => setPindah(null)}
+          onSelesai={(meja) => {
+            setPindah(null);
+            load();
+            alert(`Bill #${pindah.order_no} dipindah ke Meja ${meja.table_number}.`);
+          }}
+        />
+      )}
+
       <FaceCapture
         open={!!cap}
         title={cap?.title}
@@ -557,6 +571,11 @@ function CashierPage() {
                       Tandai Lunas
                     </button>
                   )}
+                  <div className="row">
+                    <button className="btn btn-block" onClick={() => setPindah(o)}>
+                      🔀 Pindah Meja
+                    </button>
+                  </div>
                   <div className="row">
                     <button className="btn btn-block" disabled={busy === o.id} onClick={() => patch(o.id, { status: 'closed' })}>
                       Tutup Bill

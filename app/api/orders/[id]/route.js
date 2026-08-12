@@ -60,6 +60,37 @@ export async function PATCH(req, { params }) {
   if (['qris', 'cashier'].includes(body.payment_method))
     patch.payment_method = body.payment_method;
 
+  // Pindah meja: tamu geser ke meja lain di tengah makan.
+  // table_number ikut disalin karena struk dan laporan memakai teks itu —
+  // kalau cuma table_id yang berubah, nota lama tetap menunjukkan meja lama.
+  if (body.table_id) {
+    const { data: mejaBaru } = await db
+      .from('tables').select('id, table_number, active').eq('id', body.table_id).maybeSingle();
+    if (!mejaBaru) return NextResponse.json({ error: 'Meja tujuan tidak ditemukan' }, { status: 404 });
+    if (!mejaBaru.active) return NextResponse.json({ error: 'Meja tujuan sedang nonaktif' }, { status: 400 });
+
+    // Satu meja tidak boleh punya dua bill hidup: pesanan tambahan dari QR
+    // meja itu memilih bill secara otomatis, dan dengan dua bill pilihannya
+    // jadi untung-untungan.
+    const { data: bentrok } = await db
+      .from('orders')
+      .select('id, order_no')
+      .eq('table_id', body.table_id)
+      .in('status', ['open', 'preparing', 'served'])
+      .neq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (bentrok) {
+      return NextResponse.json(
+        { error: `Meja ${mejaBaru.table_number} masih punya bill #${bentrok.order_no} yang belum ditutup. Tutup dulu bill itu, atau pilih meja lain.` },
+        { status: 409 },
+      );
+    }
+
+    patch.table_id = mejaBaru.id;
+    patch.table_number = mejaBaru.table_number;
+  }
+
   if (Object.keys(patch).length === 0)
     return NextResponse.json({ error: 'Tidak ada perubahan' }, { status: 400 });
 

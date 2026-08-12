@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CallWaiterButton from '../../components/CallWaiterButton';
 import { cocok } from '../../../lib/cari';
+import { bacaJson } from '../../../lib/bacaJson';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -115,7 +116,7 @@ export default function MenuClient({
           })),
         }),
       });
-      const data = await res.json();
+      const data = await bacaJson(res);
       if (!res.ok) throw new Error(data.error || 'Gagal membuat pesanan');
       if (reservasi) { router.refresh(); setShowCart(false); setCart({}); setNotes({}); setSubmitting(false); return; }
       router.push(`/order/${data.order_id}`);

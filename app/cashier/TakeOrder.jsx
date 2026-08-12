@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
 import { cocok } from '../../lib/cari';
 import { urutkanMeja } from '../../lib/urutMeja';
+import { bacaJson } from '../../lib/bacaJson';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -279,7 +280,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           })),
         }),
       });
-      const data = await res.json();
+      const data = await bacaJson(res);
       if (!res.ok) throw new Error(data.error || 'Gagal membuat order');
       setResult({ order_id: data.order_id, order_no: data.order_no, table_number: table.table_number });
     } catch (e) {

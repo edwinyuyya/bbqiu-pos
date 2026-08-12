@@ -155,7 +155,7 @@ export async function POST(req) {
       .eq('status', 'scheduled')
       .maybeSingle();
     billBerjalan = data || null;
-  } else if (b.order_id) {
+  } else if (body.order_id) {
     // Kasir menekan "Tambah Pesanan" pada bill tertentu. Di sini billnya sudah
     // ditunjuk, jadi jangan menebak-nebak lagi — termasuk kalau billnya sudah
     // ditandai lunas. Tamu yang sudah bayar lalu memesan lagi tetap harus
@@ -164,7 +164,7 @@ export async function POST(req) {
     const { data } = await db
       .from('orders')
       .select('*')
-      .eq('id', b.order_id)
+      .eq('id', body.order_id)
       .in('status', ['open', 'preparing', 'served'])
       .maybeSingle();
     if (!data) {

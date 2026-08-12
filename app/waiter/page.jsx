@@ -8,6 +8,7 @@ import TablesTab from '../admin/TablesTab';
 import AvailabilityTab from './AvailabilityTab';
 import AntrianTab from './AntrianTab';
 import ReservasiTab from './ReservasiTab';
+import BillTab from './BillTab';
 import { stockLimitByMenu, attachStockLimit } from '../../lib/stockLimit';
 
 // Bunyi "ding-dong" pendek pakai Web Audio API (tanpa file audio eksternal).
@@ -198,6 +199,9 @@ function WaiterPage() {
         <button className={`btn ${tab === 'reservasi' ? 'btn-brand' : ''}`} onClick={() => setTab('reservasi')}>
           📅 Reservasi {reservasi.length > 0 ? `(${reservasi.length})` : ''}
         </button>
+        <button className={`btn ${tab === 'bill' ? 'btn-brand' : ''}`} onClick={() => setTab('bill')}>
+          🧾 Bill Meja
+        </button>
         <button className={`btn ${tab === 'tables' ? 'btn-brand' : ''}`} onClick={() => setTab('tables')}>Meja &amp; QR</button>
         <button className={`btn ${tab === 'avail' ? 'btn-brand' : ''}`} onClick={() => setTab('avail')}>Ketersediaan Menu</button>
       </div>
@@ -237,6 +241,7 @@ function WaiterPage() {
           origin={origin}
         />
       )}
+      {tab === 'bill' && <BillTab />}
       {tab === 'tables' && <TablesTab tables={tables} origin={origin} reload={load} />}
       {tab === 'avail' && <AvailabilityTab items={items} reload={load} />}
     </div>

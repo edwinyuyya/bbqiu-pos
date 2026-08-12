@@ -325,12 +325,17 @@ function KitchenPage() {
               )}
 
               <div className="row no-print" style={{ marginTop: 8 }}>
+                {/* Tiap station punya printernya sendiri, jadi tautan cetak
+                    ikut membawa station yang sedang disaring. Tanpa ini,
+                    struk semua station keluar dari satu printer. */}
                 <Link
-                  href={`/kitchen/print/${o.id}`}
+                  href={`/kitchen/print/${o.id}${stationFilter === 'all' ? '' : `?station=${stationFilter}`}`}
                   target="_blank"
                   className="btn btn-brand btn-block"
                 >
-                  🖨️ Cetak Dapur (3 station)
+                  {stationFilter === 'all'
+                    ? '🖨️ Cetak Dapur (semua station)'
+                    : `🖨️ Cetak ${STATIONS.find((s) => s.id === stationFilter)?.name || 'Station'}`}
                 </Link>
                 <button
                   className="btn btn-green btn-block"

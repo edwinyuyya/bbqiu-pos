@@ -61,7 +61,7 @@ export default async function PrintPage({ params, searchParams }) {
   // dicetak — kalau semua item ikut tercetak lagi, dapur akan memasak ulang
   // pesanan yang tadi sudah jadi.
   // ?semua=1 memaksa cetak seluruh isi bill (untuk cetak ulang manual).
-  const { semua } = await searchParams;
+  const { semua, station: stationDipilih } = await searchParams;
   const cetakSemua = semua === '1' || jobs?.[0]?.batch_no == null;
   const batchCetak = jobs?.[0]?.batch_no ?? null;
 
@@ -81,7 +81,15 @@ export default async function PrintPage({ params, searchParams }) {
   const others = (items || []).filter((i) => !STATIONS.some((s) => s.id === i.station_id));
   if (others.length) grouped.push({ id: 'other', name: 'LAINNYA', items: others });
 
-  const activeStations = grouped.filter((g) => g.items.length);
+  let activeStations = grouped.filter((g) => g.items.length);
+
+  // Satu printer per station: struk station lain tidak boleh ikut keluar dari
+  // printer ini. ?station= dibawa dari Kitchen Display sesuai penyaring yang
+  // sedang aktif di tablet station itu.
+  const semuaStation = activeStations;
+  if (stationDipilih) {
+    activeStations = activeStations.filter((s) => s.id === stationDipilih);
+  }
 
   const statusBayar = order.payment_status === 'paid'
     ? 'LUNAS'
@@ -102,9 +110,36 @@ export default async function PrintPage({ params, searchParams }) {
     <div className="container-sm" style={{ paddingTop: 16 }}>
       <PrintControls jobId={jobId} order={order} stations={untukTermal} />
 
+      {semuaStation.length > 1 && (
+        <div className="card no-print" style={{ marginBottom: 12 }}>
+          <div className="bold small" style={{ marginBottom: 6 }}>
+            Cetak hanya satu station
+          </div>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Kalau tiap station punya printer sendiri, pakai tombol ini dari tablet
+            station yang bersangkutan — supaya struk station lain tidak ikut keluar.
+          </p>
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            {semuaStation.map((s) => (
+              <a key={s.id}
+                href={`/kitchen/print/${orderId}?station=${s.id}${semua === '1' ? '&semua=1' : ''}`}
+                className={`btn ${stationDipilih === s.id ? 'btn-brand' : ''}`}>
+                {s.name} ({s.items.length})
+              </a>
+            ))}
+            {stationDipilih && (
+              <a href={`/kitchen/print/${orderId}${semua === '1' ? '?semua=1' : ''}`} className="btn">
+                Semua station
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <p className="muted small no-print" style={{ marginTop: 8 }}>
-        Satu dokumen ini berisi {activeStations.length} struk station — printer akan
-        mencetak berurutan dengan pemisah potong di antaranya.
+        {stationDipilih
+          ? `Hanya struk ${activeStations[0]?.name || 'station ini'} yang dicetak.`
+          : `Satu dokumen ini berisi ${activeStations.length} struk station — printer akan mencetak berurutan dengan pemisah potong di antaranya.`}
         {!cetakSemua && (
           <>
             {' '}Yang dicetak hanya <b>pesanan tambahan ke-{batchCetak}</b>.{' '}

@@ -8,14 +8,15 @@ import { cocok } from '../../lib/cari';
 
 const KOSONG = {
   code: '', name: '', percent: '', scope: SCOPE.ALL,
-  scope_category_ids: [], valid_from: '', valid_until: '',
+  scope_category_ids: [], exclude_menu_item_ids: [], valid_from: '', valid_until: '',
 };
 
-export default function PromoTab({ promos, categories, reload }) {
+export default function PromoTab({ promos, categories, items = [], reload }) {
   const [form, setForm] = useState(KOSONG);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [qKecuali, setQKecuali] = useState('');
 
   const tersaring = useMemo(
     () => promos.filter((p) => cocok([p.code, p.name], q)),
@@ -26,6 +27,24 @@ export default function PromoTab({ promos, categories, reload }) {
     () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
     [categories]
   );
+  const namaMenu = useMemo(
+    () => Object.fromEntries(items.map((m) => [m.id, m.name])),
+    [items]
+  );
+
+  // Hanya menu yang benar-benar kena promo yang perlu ditawarkan sebagai
+  // pengecualian — daftar 130-an menu tanpa saringan cuma bikin salah pilih.
+  const kandidat = useMemo(() => {
+    const kena = items.filter((m) => {
+      const daftar = form.scope_category_ids;
+      if (form.scope === SCOPE.CATEGORIES) return daftar.includes(m.category_id);
+      if (form.scope === SCOPE.EXCEPT_CATEGORIES) return !daftar.includes(m.category_id);
+      return true;
+    });
+    return kena
+      .filter((m) => cocok([m.name, namaKategori[m.category_id]], qKecuali))
+      .slice(0, 40);
+  }, [items, form.scope, form.scope_category_ids, qKecuali, namaKategori]);
 
   function toggleKategori(id) {
     setForm((f) => ({
@@ -33,6 +52,15 @@ export default function PromoTab({ promos, categories, reload }) {
       scope_category_ids: f.scope_category_ids.includes(id)
         ? f.scope_category_ids.filter((x) => x !== id)
         : [...f.scope_category_ids, id],
+    }));
+  }
+
+  function toggleKecuali(id) {
+    setForm((f) => ({
+      ...f,
+      exclude_menu_item_ids: f.exclude_menu_item_ids.includes(id)
+        ? f.exclude_menu_item_ids.filter((x) => x !== id)
+        : [...f.exclude_menu_item_ids, id],
     }));
   }
 
@@ -55,6 +83,7 @@ export default function PromoTab({ promos, categories, reload }) {
       percent,
       scope: form.scope,
       scope_category_ids: form.scope === SCOPE.ALL ? [] : form.scope_category_ids,
+      exclude_menu_item_ids: form.exclude_menu_item_ids,
       valid_from: form.valid_from || null,
       valid_until: form.valid_until || null,
       active: true,
@@ -117,6 +146,47 @@ export default function PromoTab({ promos, categories, reload }) {
           )}
         </div>
 
+        <div style={{ marginTop: 12 }}>
+          <div className="muted small">
+            Kecualikan menu tertentu <span style={{ opacity: 0.7 }}>(opsional)</span>
+          </div>
+          <p className="muted small" style={{ margin: '2px 0 6px' }}>
+            Untuk menu yang <b>tidak</b> ikut diskon walau kategorinya kena — misalnya
+            paket, atau nasi yang kebetulan duduk di kategori à la carte.
+          </p>
+
+          {form.exclude_menu_item_ids.length > 0 && (
+            <div className="opt-row" style={{ marginBottom: 6 }}>
+              {form.exclude_menu_item_ids.map((id) => (
+                <button key={id} type="button" className="chip chip-on"
+                  onClick={() => toggleKecuali(id)}>
+                  {namaMenu[id] || 'menu'} ✕
+                </button>
+              ))}
+            </div>
+          )}
+
+          <input
+            className="input" placeholder="Cari menu yang mau dikecualikan…"
+            value={qKecuali} onChange={(e) => setQKecuali(e.target.value)}
+          />
+          {qKecuali.trim() && (
+            <div className="opt-row" style={{ marginTop: 6 }}>
+              {kandidat.map((m) => (
+                <button key={m.id} type="button"
+                  className={`chip ${form.exclude_menu_item_ids.includes(m.id) ? 'chip-on' : ''}`}
+                  onClick={() => toggleKecuali(m.id)}>
+                  {m.name}
+                  <span className="muted"> · {namaKategori[m.category_id] || '—'}</span>
+                </button>
+              ))}
+              {kandidat.length === 0 && (
+                <span className="muted small">Tidak ada menu yang cocok di lingkup promo ini.</span>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="row" style={{ marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
             <div className="muted small">Mulai (kosong = langsung)</div>
@@ -163,7 +233,7 @@ export default function PromoTab({ promos, categories, reload }) {
             </div>
             <div className="muted small" style={{ marginTop: 4 }}>{p.name}</div>
             <div className="small" style={{ marginTop: 6 }}>
-              {ringkasLingkup(p, namaKategori)}
+              {ringkasLingkup(p, namaKategori, namaMenu)}
             </div>
             <div className="muted small" style={{ marginTop: 2 }}>
               {p.valid_from || p.valid_until

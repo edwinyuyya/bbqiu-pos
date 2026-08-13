@@ -96,7 +96,7 @@ function AdminPage() {
         <MenuTab items={items} categories={categories} stations={stations} inventory={inventory} reload={load} />
       )}
       {tab === 'promo' && (
-        <PromoTab promos={promos} categories={categories} reload={load} />
+        <PromoTab promos={promos} categories={categories} items={items} reload={load} />
       )}
     </div>
   );

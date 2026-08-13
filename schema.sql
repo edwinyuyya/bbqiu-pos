@@ -471,6 +471,9 @@ create table if not exists promos (
   -- 'all' | 'categories' | 'except_categories'
   scope       text not null default 'all',
   scope_category_ids uuid[] default '{}',
+  -- Menu yang dikecualikan meski kategorinya kena. Kategori saja tidak cukup:
+  -- item paket dan "Nasi" duduk di kategori Grill & Steamboat yang à la carte.
+  exclude_menu_item_ids uuid[] default '{}',
   valid_from  date,                          -- null = tanpa batas awal
   valid_until date,                          -- null = sampai dibatalkan manual
   active      boolean default true,
@@ -486,6 +489,8 @@ create index if not exists idx_promos_active on promos (active, valid_until);
 alter table orders add column if not exists promo_code text;
 alter table orders add column if not exists promo_id   uuid references promos(id);
 alter table orders add column if not exists discount   numeric default 0;
+
+alter table promos add column if not exists exclude_menu_item_ids uuid[] default '{}';
 
 alter table promos enable row level security;
 drop policy if exists "allow all promos" on promos;

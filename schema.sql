@@ -492,6 +492,11 @@ alter table orders add column if not exists discount   numeric default 0;
 
 alter table promos add column if not exists exclude_menu_item_ids uuid[] default '{}';
 
+-- Menu yang tidak boleh kena kode promo apa pun (paket, menu harga khusus).
+-- Melekat pada menunya, bukan pada promonya: promo baru tidak perlu ingat
+-- untuk mengecualikannya lagi.
+alter table menu_items add column if not exists promo_eligible boolean not null default true;
+
 alter table promos enable row level security;
 drop policy if exists "allow all promos" on promos;
 create policy "allow all promos" on promos for all using (true) with check (true);

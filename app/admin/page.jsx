@@ -180,6 +180,15 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
     await reload();
     setBusy(false);
   }
+  // Mengunci satu menu dari SEMUA kode promo. Dipakai untuk paket dan menu
+  // harga khusus: harganya sudah dipotong di muka, jadi kena promo lagi
+  // berarti dijual di bawah modal.
+  async function togglePromo(it) {
+    await supabase.from('menu_items')
+      .update({ promo_eligible: it.promo_eligible === false })
+      .eq('id', it.id);
+    reload();
+  }
   async function toggle(it) {
     await supabase.from('menu_items').update({ available: !it.available }).eq('id', it.id);
     reload();
@@ -311,6 +320,11 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                           diskon {Number(it.discount_percent)}%
                         </span>
                       )}
+                      {it.promo_eligible === false && (
+                        <span className="badge badge-red" style={{ marginLeft: 6 }}>
+                          🔒 bebas promo
+                        </span>
+                      )}
                       {it.needs_fry_first && (
                         <span className="badge badge-amber" style={{ marginLeft: 6 }}>
                           🍳 goreng dulu
@@ -351,6 +365,13 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                       {it.needs_fry_first ? '🍳 Goreng dulu: YA' : '🍳 Goreng dulu: TIDAK'}
                     </button>
                   )}
+                  <button
+                    className="btn" style={{ padding: '6px 10px', fontSize: 13 }}
+                    onClick={() => togglePromo(it)}
+                    title="Kalau dikunci, menu ini tidak pernah kena kode promo apa pun — sekarang maupun promo yang dibuat nanti"
+                  >
+                    {it.promo_eligible === false ? '🔒 Bebas promo: YA' : '🔒 Bebas promo: TIDAK'}
+                  </button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => toggle(it)}>{it.available ? 'Set habis' : 'Set tersedia'}</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => del(it)}>Hapus</button>
                 </div>

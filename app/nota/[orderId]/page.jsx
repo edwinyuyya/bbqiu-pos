@@ -54,6 +54,15 @@ export default async function NotaPage({ params }) {
               <span>{it.qty} x {rupiah(it.price)}</span>
               <span className="rgt">{rupiah(it.qty * it.price)}</span>
             </div>
+            {/* Potongan ditulis di barisnya sendiri. Tanpa ini nota cuma
+                memuat satu angka diskon di bawah, dan tamu wajar mengira
+                seluruh isi nota — termasuk minuman — ikut dipotong. */}
+            {Number(it.discount) > 0 && (
+              <div className="item">
+                <span>&nbsp;&nbsp;Diskon {it.discount_note || ''}</span>
+                <span className="rgt">- {rupiah(it.discount)}</span>
+              </div>
+            )}
             {it.note && <div style={{ fontStyle: 'italic' }}>* {it.note}</div>}
           </div>
         ))}

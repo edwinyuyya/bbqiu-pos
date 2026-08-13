@@ -484,6 +484,21 @@ function CashierPage() {
                     </span>
                   </div>
                 ))}
+                {/* Baris mana yang kena promo ditulis terpisah, supaya kasir
+                    bisa menjawab tamu yang bertanya kenapa minumannya tidak
+                    ikut turun tanpa harus menghitung ulang di kertas. */}
+                {(items[o.id] || []).some((it) => Number(it.discount) > 0) && (
+                  <div className="small" style={{ color: '#16794a' }}>
+                    {(items[o.id] || [])
+                      .filter((it) => Number(it.discount) > 0 && !it.cancelled_at)
+                      .map((it) => (
+                        <div key={`d-${it.id}`} className="between">
+                          <span>↳ {it.name} — diskon {it.discount_note || ''}</span>
+                          <span>− {rupiah(it.discount)}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
               <hr className="hr" />
               {Number(o.discount) > 0 && (

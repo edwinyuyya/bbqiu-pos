@@ -150,6 +150,11 @@ export default function OrderClient({ initialOrder, items, qrDataUrl, qrisDynami
                   </span>
                 ))}
                 {it.note && <div className="muted small">“{it.note}”</div>}
+                {Number(it.discount) > 0 && (
+                  <div className="small" style={{ color: '#16794a' }}>
+                    diskon {it.discount_note || ''} — {rupiah(it.discount)}
+                  </div>
+                )}
               </div>
               <span>{rupiah(it.price * it.qty)}</span>
             </div>

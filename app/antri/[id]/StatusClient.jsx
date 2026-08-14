@@ -129,7 +129,6 @@ export default function StatusClient({ id }) {
           #{entri.queue_no}
         </div>
         <div className="bold">{entri.customer_name} · {entri.party_size} orang</div>
-        {entri.area_pref && <div className="muted small" style={{ marginTop: 2 }}>Area {entri.area_pref}</div>}
       </div>
 
       <div className="card">

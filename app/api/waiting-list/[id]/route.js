@@ -55,9 +55,7 @@ export async function GET(_req, { params }) {
 
   const estimasi = posisi == null ? null : estimasiMenit({
     posisi,
-    meja: mejaCocok(tables || [], {
-      partySize: entri.party_size, areaPref: entri.area_pref,
-    }),
+    meja: mejaCocok(tables || [], { partySize: entri.party_size }),
     mejaTerpakai: terpakai,
     durasiMenit: durasi,
   });

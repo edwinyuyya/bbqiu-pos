@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../lib/supabaseServer';
 import { sendNotif } from '../../../lib/notify';
-import { AREAS } from '../../../lib/waitingList';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +27,7 @@ export async function GET(req) {
   return NextResponse.json({ antrian: data || [] });
 }
 
-// POST /api/waiting-list  { customer_name, party_size, area_pref?, phone?, note?, device_key? }
+// POST /api/waiting-list  { customer_name, party_size, phone?, note?, device_key? }
 // Publik (dipanggil dari halaman /antri hasil scan QR pintu masuk).
 export async function POST(req) {
   const db = supabaseServer();
@@ -43,7 +42,6 @@ export async function POST(req) {
   const partySize = Math.min(50, Math.max(1, parseInt(b.party_size, 10) || 0));
   if (!partySize) return NextResponse.json({ error: 'Jumlah orang wajib diisi' }, { status: 400 });
 
-  const areaPref = AREAS.includes(b.area_pref) ? b.area_pref : null;
   const phone = (b.phone || '').toString().replace(/[^0-9+]/g, '').slice(0, 20) || null;
   const note = (b.note || '').toString().slice(0, 200) || null;
   const deviceKey = (b.device_key || '').toString().slice(0, 64) || null;
@@ -83,7 +81,6 @@ export async function POST(req) {
         customer_name: nama,
         phone,
         party_size: partySize,
-        area_pref: areaPref,
         note,
         device_key: deviceKey,
       })
@@ -92,8 +89,7 @@ export async function POST(req) {
 
     if (!error) {
       sendNotif(
-        `📝 *ANTRIAN BARU #${nomor}*\n${nama} · ${partySize} orang` +
-        `${areaPref ? `\nArea: ${areaPref}` : ''}${note ? `\nCatatan: ${note}` : ''}`
+        `📝 *ANTRIAN BARU #${nomor}*\n${nama} · ${partySize} orang${note ? `\nCatatan: ${note}` : ''}`
       );
       return NextResponse.json({ ok: true, entri: data });
     }

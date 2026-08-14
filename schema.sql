@@ -401,7 +401,7 @@ create table if not exists waiting_list (
   customer_name text not null,
   phone         text,
   party_size    int  not null default 2,
-  area_pref     text,                             -- null = area bebas
+  area_pref     text,                             -- tidak dipakai lagi; kolom disimpan untuk antrian lama
   note          text,
   status        text not null default 'waiting',  -- waiting | called | seated | no_show | cancelled
   table_id      uuid references tables(id),       -- meja yang diberikan saat dipanggil

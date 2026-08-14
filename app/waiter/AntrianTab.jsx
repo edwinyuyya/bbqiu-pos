@@ -138,9 +138,7 @@ export default function AntrianTab({ antrian, tables, mejaTerpakai, reload, orig
 
       {menunggu.map((a, i) => {
         // Meja yang cocok DAN sedang kosong — inilah yang boleh ditawarkan.
-        const cocok = mejaCocok(mejaKosong, {
-          partySize: a.party_size, areaPref: a.area_pref,
-        });
+        const cocok = mejaCocok(mejaKosong, { partySize: a.party_size });
         const terpilih = pilihMeja[a.id] || cocok[0]?.id || '';
         return (
           <div key={a.id} className="card">
@@ -149,7 +147,6 @@ export default function AntrianTab({ antrian, tables, mejaTerpakai, reload, orig
                 <span className="bold">#{a.queue_no} · {a.customer_name}</span>
                 <div className="muted small">
                   {a.party_size} orang
-                  {a.area_pref ? ` · minta ${a.area_pref}` : ' · area bebas'}
                   {' · '}menunggu {lamaTeks(menitSejak(a.created_at))}
                 </div>
                 {a.note && <div className="muted small">“{a.note}”</div>}
@@ -162,8 +159,7 @@ export default function AntrianTab({ antrian, tables, mejaTerpakai, reload, orig
 
             {cocok.length === 0 && (
               <p className="muted small" style={{ marginTop: 10, marginBottom: 0 }}>
-                Belum ada meja kosong yang muat {a.party_size} orang
-                {a.area_pref ? ` di area ${a.area_pref}` : ''}.
+                Belum ada meja kosong yang muat {a.party_size} orang.
               </p>
             )}
 

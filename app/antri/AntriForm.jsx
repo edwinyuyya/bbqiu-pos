@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AREAS } from '../../lib/waitingList';
 
 const KUNCI_HP = 'bbqiu_antri_device';
 const KUNCI_ENTRI = 'bbqiu_antri_id';
@@ -21,7 +20,6 @@ export default function AntriForm({ merchant }) {
   const router = useRouter();
   const [nama, setNama] = useState('');
   const [orang, setOrang] = useState(2);
-  const [area, setArea] = useState('');
   const [hp, setHp] = useState('');
   const [catatan, setCatatan] = useState('');
   const [kirim, setKirim] = useState(false);
@@ -58,7 +56,6 @@ export default function AntriForm({ merchant }) {
         body: JSON.stringify({
           customer_name: nama,
           party_size: orang,
-          area_pref: area || null,
           phone: hp,
           note: catatan,
           device_key: deviceKey(),
@@ -97,27 +94,6 @@ export default function AntriForm({ merchant }) {
             <button onClick={() => setOrang((n) => Math.min(50, n + 1))}>+</button>
           </div>
           <span className="muted small">orang</span>
-        </div>
-
-        <label className="muted small" style={{ display: 'block', marginTop: 12 }}>Pilihan area</label>
-        <div className="opt-row" style={{ marginTop: 4 }}>
-          <button
-            type="button" className={`chip ${area === '' ? 'chip-on' : ''}`}
-            onClick={() => setArea('')}
-          >
-            Bebas
-          </button>
-          {AREAS.map((a) => (
-            <button
-              key={a} type="button" className={`chip ${area === a ? 'chip-on' : ''}`}
-              onClick={() => setArea(a)}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-        <div className="muted small" style={{ marginTop: 6 }}>
-          Pilih “Bebas” supaya lebih cepat dapat meja.
         </div>
 
         <label className="muted small" style={{ display: 'block', marginTop: 12 }}>

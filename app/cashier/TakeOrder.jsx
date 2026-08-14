@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
@@ -137,11 +137,16 @@ function PilihVarian({ item, onTambah, onTutup }) {
 // hitung QRIS dinamis, dsb sudah otomatis ikut, tidak perlu logic baru).
 export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah }) {
   const [tables, setTables] = useState([]);
+  const [terpakai, setTerpakai] = useState({}); // table_id -> order_no bill yang masih jalan
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [laris, setLaris] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Input order jadi dua langkah: pilih meja dulu, baru menu. Meja yang salah
+  // baru ketahuan setelah struk dapur tercetak, jadi langkahnya dipisah supaya
+  // tidak terlewat sambil buru-buru mengetuk menu.
+  const [tabInput, setTabInput] = useState('meja'); // meja | menu
   const [tableId, setTableId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [payment, setPayment] = useState('cashier');
@@ -154,13 +159,26 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   const [result, setResult] = useState(null);
   const [cari, setCari] = useState('');
 
+  // Meja yang billnya belum ditutup dianggap masih dipakai. Diambil terpisah
+  // supaya bisa disegarkan ulang tiap kali kasir kembali ke langkah pilih meja
+  // — di jam ramai, meja bisa terisi oleh kasir lain sambil layar ini terbuka.
+  const muatTerpakai = useCallback(async () => {
+    const { data } = await supabase
+      .from('orders').select('id, table_id, order_no')
+      .in('status', ['open', 'preparing', 'served']);
+    const pakai = {};
+    for (const row of data || []) if (row.table_id) pakai[row.table_id] = row.order_no;
+    setTerpakai(pakai);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const [t, c, m, l] = await Promise.all([
-        supabase.from('tables').select('id, table_number, token, active').eq('active', true).order('table_number'),
+        supabase.from('tables').select('id, table_number, seats, area, token, active').eq('active', true).order('table_number'),
         supabase.from('categories').select('*').order('sort_order'),
         supabase.from('menu_items').select('*').eq('available', true).order('sort_order'),
         fetch('/api/menu/laris?hari=30&jumlah=12').then((r) => r.json()).catch(() => ({ laris: [] })),
+        muatTerpakai(),
       ]);
       setTables(t.data || []);
       setCategories(c.data || []);
@@ -168,13 +186,17 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
       setLaris(l.laris || []);
       setLoading(false);
     })();
-  }, []);
+  }, [muatTerpakai]);
 
   // Datang dari tombol "Tambah Pesanan" di kartu bill: mejanya sudah pasti,
   // jadi langsung dipilihkan. Menunggu daftar meja selesai dimuat, kalau tidak
   // pilihannya tertimpa nilai kosong.
   useEffect(() => {
-    if (tambahKe?.table_id && tables.length) setTableId(tambahKe.table_id);
+    if (tambahKe?.table_id && tables.length) {
+      setTableId(tambahKe.table_id);
+      // Mejanya sudah pasti, langkah pilih meja tidak ada gunanya lagi.
+      setTabInput('menu');
+    }
   }, [tambahKe, tables]);
 
   const itemById = useMemo(() => Object.fromEntries(menuItems.map((i) => [i.id, i])), [menuItems]);
@@ -252,12 +274,29 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   function reset() {
     setCart({}); setNotes({}); setCustomerName(''); setTableId('');
     setPayment('cashier'); setResult(null); setError(''); setCari(''); setKategoriAktif('');
+    setTabInput('meja');
+    muatTerpakai();
+  }
+
+  function pilihMeja(t) {
+    if (terpakai[t.id]) return;
+    setTableId(t.id);
+    setError('');
+    setTabInput('menu');
   }
 
   async function submit() {
     setError('');
-    if (!tableId) { setError('Pilih meja dulu.'); return; }
+    if (!tableId) { setError('Pilih meja dulu.'); setTabInput('meja'); return; }
     if (!cartLines.length) { setError('Belum ada menu dipilih.'); return; }
+    // Meja bisa terisi oleh kasir lain sejak layar ini dibuka. Dicegat di sini
+    // juga, bukan hanya di tombol pilih meja, supaya order baru tidak menempel
+    // ke meja yang billnya masih jalan.
+    if (!tambahKe && terpakai[tableId]) {
+      setError(`Meja itu sudah dipakai bill #${terpakai[tableId]}. Pilih meja lain, atau tambahkan lewat kartu bill di tab Bill.`);
+      setTabInput('meja');
+      return;
+    }
     const table = tables.find((t) => t.id === tableId);
     setSubmitting(true);
     try {
@@ -307,7 +346,10 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           </p>
         )}
         <div className="col" style={{ gap: 8, marginTop: 10 }}>
-          <Link href={`/order/${result.order_id}`} target="_blank" className="btn btn-brand btn-block">Buka Halaman Order (QRIS/status)</Link>
+          <Link href={`/cashier/barcode/${result.order_id}`} target="_blank" className="btn btn-brand btn-block">
+            🔳 Cetak Barcode Meja (Meja {result.table_number} · #{result.order_no})
+          </Link>
+          <Link href={`/order/${result.order_id}`} target="_blank" className="btn btn-block">Buka Halaman Order (QRIS/status)</Link>
           <Link href={`/kitchen/print/${result.order_id}`} target="_blank" className="btn btn-block">🖨️ Struk Dapur</Link>
           <Link href={`/nota/${result.order_id}`} target="_blank" className="btn btn-block">🧾 Cetak Nota</Link>
           <button className="btn btn-block" onClick={() => { reset(); if (onCreated) onCreated(); }}>Selesai, kembali ke Bill</button>
@@ -317,13 +359,77 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
     );
   }
 
+  const mejaTerpilih = tables.find((t) => t.id === tableId);
+  const daftarMeja = urutkanMeja(tables);
+  const mejaKosong = daftarMeja.filter((t) => !terpakai[t.id]).length;
+
   return (
     <>
       {varian && (
         <PilihVarian item={varian} onTambah={tambahVarian} onTutup={() => setVarian(null)} />
       )}
 
-      <div className="papan-kasir">
+      <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+        <button
+          className={`btn ${tabInput === 'meja' ? 'btn-brand' : ''}`}
+          disabled={!!tambahKe}
+          onClick={() => { setTabInput('meja'); muatTerpakai(); }}
+        >
+          1. Pilih Meja{mejaTerpilih ? ` · Meja ${mejaTerpilih.table_number}` : ''}
+        </button>
+        <button
+          className={`btn ${tabInput === 'menu' ? 'btn-brand' : ''}`}
+          onClick={() => setTabInput('menu')}
+        >
+          2. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
+        </button>
+      </div>
+
+      {tabInput === 'meja' && (
+        <div className="card">
+          <div className="between" style={{ marginBottom: 4 }}>
+            <div className="h2">🪑 Pilih Meja</div>
+            <span className="muted small">{mejaKosong} dari {daftarMeja.length} meja kosong</span>
+          </div>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Meja yang billnya belum ditutup tidak bisa dipilih. Untuk menambah
+            pesanan ke meja itu, pakai tombol <b>Tambah Pesanan</b> di kartu billnya
+            pada tab Bill supaya masuk ke tagihan yang sama.
+          </p>
+
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))' }}>
+            {daftarMeja.map((t) => {
+              const isi = terpakai[t.id];
+              return (
+                <button
+                  key={t.id}
+                  className={`btn ${tableId === t.id ? 'btn-brand' : ''}`}
+                  disabled={!!isi}
+                  style={{
+                    flexDirection: 'column', gap: 4, padding: '14px 8px',
+                    opacity: isi ? 0.55 : 1, cursor: isi ? 'not-allowed' : 'pointer',
+                  }}
+                  onClick={() => pilihMeja(t)}
+                >
+                  <span className="bold" style={{ fontSize: 18 }}>Meja {t.table_number}</span>
+                  {isi
+                    ? <span className="badge badge-amber">terisi #{isi}</span>
+                    : <span className="badge badge-green">kosong</span>}
+                  {t.seats ? <span className="muted small">{t.seats} kursi</span> : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {daftarMeja.length === 0 && (
+            <p className="muted small" style={{ margin: 0 }}>Belum ada meja aktif.</p>
+          )}
+
+          {error && <p className="small" style={{ color: '#c0271f', marginTop: 10 }}>{error}</p>}
+        </div>
+      )}
+
+      <div className="papan-kasir" style={tabInput === 'menu' ? undefined : { display: 'none' }}>
         {/* ---------- kiri: pemilihan menu ---------- */}
         <div className="col">
           <div className="card" style={{ padding: 12 }}>
@@ -469,13 +575,22 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
             <div className="col" style={{ gap: 8 }}>
               {/* Saat menambah ke bill tertentu, mejanya tidak boleh diganti —
                   salah meja di sini berarti tagihan menempel ke tamu lain. */}
+              {/* Meja dipilih di langkah 1; di sini cuma ditegaskan lagi supaya
+                  kasir tidak perlu pindah tab untuk memastikan. */}
               {tambahKe ? (
                 <div className="input" style={{ opacity: 0.75 }}>Meja {tambahKe.table_number}</div>
               ) : (
-                <select className="select" value={tableId} onChange={(e) => setTableId(e.target.value)}>
-                  <option value="">— Pilih meja —</option>
-                  {urutkanMeja(tables).map((t) => <option key={t.id} value={t.id}>Meja {t.table_number}</option>)}
-                </select>
+                <div className="between">
+                  <span className={mejaTerpilih ? 'bold' : 'muted'}>
+                    {mejaTerpilih ? `Meja ${mejaTerpilih.table_number}` : 'Meja belum dipilih'}
+                  </span>
+                  <button
+                    className="btn" style={{ padding: '6px 10px', fontSize: 13 }}
+                    onClick={() => { setTabInput('meja'); muatTerpakai(); }}
+                  >
+                    {mejaTerpilih ? 'Ganti meja' : 'Pilih meja'}
+                  </button>
+                </div>
               )}
               <input className="input" placeholder="Nama pelanggan (opsional)"
                 value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
@@ -503,7 +618,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
         </div>
       </div>
 
-      {cartLines.length > 0 && (
+      {cartLines.length > 0 && tabInput === 'menu' && (
         <div className="bar-keranjang">
           <div>
             <div className="bold" style={{ fontSize: 17 }}>{rupiah(total)}</div>

@@ -116,8 +116,11 @@ a { color: inherit; text-decoration: none; }
   .ticket { page-break-after: always; border: 0; margin: 0 auto; width: 48mm; padding: 2mm 0; }
   .container-sm, .container { padding: 0; max-width: none; }
   /* Kepala termal hanya hitam-putih: logo berwarna keluar jadi blok abu-abu
-     atau bikin proses cetak menggantung. Dipertajam jadi dua nada. */
-  .ticket img { filter: grayscale(1) contrast(3); max-width: 36mm; }
+     atau bikin proses cetak menggantung. Dipertajam jadi dua nada.
+     height:auto WAJIB ikut max-width — tanpa itu lebar gambar dipangkas ke
+     36mm sementara tingginya tetap ikut atribut asli, jadi QR tercetak
+     gepeng memanjang dan tidak bisa discan sama sekali. */
+  .ticket img { filter: grayscale(1) contrast(3); max-width: 36mm; height: auto; }
 }
 .ticket {
   background: #fff; color: #000; width: 48mm; margin: 0 auto 18px;
@@ -131,6 +134,41 @@ a { color: inherit; text-decoration: none; }
 .ticket .rgt { text-align: right; }
 .ticket .ctr { text-align: center; }
 .cut { text-align: center; color: #888; font-size: 11px; margin: 4px 0; }
+
+/* ---------- Label QR meja (kartu, BUKAN struk termal) ----------
+   Dulu label ini ikut memakai .ticket, jadi kena aturan struk: kertas
+   58mm dengan tinggi auto dan QR dipangkas 36mm. Hasil cetaknya sempit
+   memanjang dan QR-nya gepeng. Label meja ditempel di meja, bukan
+   disobek dari roll termal, jadi ukurannya dikunci sendiri di sini
+   dan QR-nya dijaga tetap bujur sangkar. */
+.qr-label {
+  background: #fff; color: #000;
+  width: 70mm; box-sizing: border-box;
+  margin: 0 auto 14px; padding: 5mm 4mm;
+  border: 1px dashed #bbb; border-radius: 3mm;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
+}
+.qr-label .merchant { font-size: 12px; font-weight: 700; letter-spacing: .4px; }
+.qr-label .meja { font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 1mm; }
+.qr-label .order { font-size: 16px; font-weight: 700; margin-top: 1mm; }
+.qr-label .hint { font-size: 11px; color: #444; margin: 2mm 0; }
+/* Bujur sangkar dikunci lewat aspect-ratio, bukan tinggi tetap, supaya
+   tetap kotak walau printer menskalakan halaman. */
+.qr-label img {
+  width: 52mm; aspect-ratio: 1 / 1; height: auto;
+  display: block; margin: 0 auto;
+}
+.qr-label .link { font-size: 8px; color: #555; word-break: break-all; margin-top: 2mm; }
+
+@media print {
+  .qr-label {
+    border: 0; border-radius: 0; margin: 0 auto;
+    page-break-after: always; break-after: page;
+  }
+  /* Tanpa ini QR ikut difilter jadi 2 nada seperti struk termal. */
+  .qr-label img { filter: none; max-width: none; }
+}
 
 /* ---------- Label batch 50x30mm (produksi bumbu & terima daging) ---------- */
 @media print {

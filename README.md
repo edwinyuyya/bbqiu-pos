@@ -22,12 +22,19 @@ Apps Script (backend Google Sheets, storage Google Drive), lihat
 - `qrcode` untuk generate QR meja & QRIS
 
 ## Fitur saat ini
-- **Pelanggan**: scan QR meja → `/menu/[token]` → pilih menu → checkout → pilih
-  metode bayar (QRIS / kasir) → halaman status `/order/[id]`.
+- **Pelanggan**: scan barcode meja → `/meja/[token]` → hanya dua hal: panggil
+  waiter (tombol cepat atau tulis permintaan) dan lihat daftar pesanan yang
+  sudah masuk, **tanpa harga**. Pemesanan dilakukan kasir.
+- **Pesan mandiri** (`/menu/[token]`): alur pelanggan memilih menu sendiri —
+  sekarang dipakai lewat tautan reservasi, bukan dari barcode meja.
 - **QRIS**: QR pembayaran digenerate otomatis (mode statis/mock; siap diganti
   payment gateway). Pelanggan konfirmasi "sudah bayar".
 - **Kasir** (`/cashier`): lihat bill aktif, tandai lunas, tutup/batalkan bill,
   cetak ulang struk dapur.
+- **Input Order kasir**: dua langkah — pilih meja lalu pilih menu. Meja yang
+  billnya belum ditutup tidak bisa dipilih. Setelah order jadi, barcode meja
+  bisa langsung dicetak (`/cashier/barcode/[orderId]`) lengkap dengan nomor
+  meja dan nomor pesanan.
 - **Kitchen Display** (`/kitchen`): tiket masuk per station, auto-refresh,
   tandai item `ready`/`served`, filter per station.
 - **Cetak dapur 1 printer → 3 station** (`/kitchen/print/[orderId]`): satu
@@ -53,19 +60,24 @@ Apps Script (backend Google Sheets, storage Google Drive), lihat
    npm install
    npm run dev
    ```
-5. Buka `/admin` → cetak QR meja → tempel di meja. Pelanggan scan untuk mulai.
+5. Buka `/admin` → cetak QR meja → tempel di meja. Pelanggan scan untuk
+   memanggil waiter dan memantau pesanannya.
 
 ## Alur data
 ```
-Pelanggan scan QR  ──>  /menu/[token]  ──>  POST /api/orders
-                                              │  (hitung total di server,
-                                              │   routing station per item,
-                                              │   buat print_job)
-                                              ▼
+Kasir: /cashier → Input Order  ──>  POST /api/orders
+   (1. pilih meja, 2. pilih menu)     │  (hitung total di server,
+                                      │   routing station per item,
+                                      │   buat print_job)
+                                      ▼
    /order/[id]  <── status & pembayaran ──  orders + order_items
         │
         ├── QRIS: tampilkan QR, konfirmasi bayar
         └── Kasir: tunjukkan #order di kasir (/cashier)
+
+Pelanggan scan barcode meja  ──>  /meja/[token]
+        ├── panggil waiter / tulis permintaan  ──>  POST /api/waiter-calls
+        └── lihat pesanan tanpa harga          ──>  GET  /api/meja/[token]
 
 Dapur: /kitchen  ──>  /kitchen/print/[orderId]
         (1 dokumen, 3 struk station: Shaokao / Maincourse / Bar)

@@ -116,7 +116,7 @@ export default function TablesTab({ tables, origin, reload }) {
           <div className="h2" style={{ marginTop: 8 }}>{areaName} <span className="muted small">({list.length} meja)</span></div>
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))' }}>
             {list.map((t) => {
-              const link = `${origin}/menu/${t.token}`;
+              const link = `${origin}/meja/${t.token}`;
               return (
                 <div key={t.id} className="card" style={{ textAlign: 'center' }}>
                   <div className="between">

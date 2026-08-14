@@ -211,27 +211,14 @@ from (values
 join categories c on c.name = m.cat
 on conflict do nothing;
 
--- Contoh meja
-insert into tables (table_number, token) values
-  ('1',  'meja-1-' || substr(md5(random()::text),1,8)),
-  ('2',  'meja-2-' || substr(md5(random()::text),1,8)),
-  ('VIP-1', 'meja-vip1-' || substr(md5(random()::text),1,8))
-on conflict (table_number) do nothing;
-
--- Layout meja BBQIU: 4 Outdoor, 8 Ruang AC, 4 VIP
+-- Layout meja BBQIU: meja 1 sampai 18, penomoran polos tanpa awalan area.
+-- Nomor inilah yang tercetak di label QR (/admin/qr), jadi angka di stiker
+-- meja sama persis dengan angka yang dilihat kasir, dapur, dan waiter.
+-- Area sengaja dibiarkan kosong: isi lewat Admin → Kelola Meja kalau
+-- suatu saat meja perlu dikelompokkan lagi.
 insert into tables (table_number, token, area)
-select 'Outdoor ' || gs, 'meja-outdoor-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'Outdoor'
-from generate_series(1, 4) as gs
-on conflict (table_number) do nothing;
-
-insert into tables (table_number, token, area)
-select 'AC ' || gs, 'meja-ac-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'Ruang AC'
-from generate_series(1, 8) as gs
-on conflict (table_number) do nothing;
-
-insert into tables (table_number, token, area)
-select 'VIP ' || gs, 'meja-vip-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), 'VIP'
-from generate_series(1, 4) as gs
+select gs::text, 'meja-' || gs || '-' || substr(md5(random()::text || gs || clock_timestamp()::text), 1, 8), null::text
+from generate_series(1, 18) as gs
 on conflict (table_number) do nothing;
 
 -- ============================================================

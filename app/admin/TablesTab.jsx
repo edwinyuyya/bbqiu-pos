@@ -70,7 +70,7 @@ export default function TablesTab({ tables, origin, reload }) {
       <div className="card">
         <div className="h2" style={{ marginBottom: 10 }}>Tambah Meja</div>
         <div className="row" style={{ flexWrap: 'wrap' }}>
-          <input className="input" placeholder="Nomor / nama meja (mis. Outdoor 5)" value={num} onChange={(e) => setNum(e.target.value)} />
+          <input className="input" placeholder="Nomor / nama meja (mis. 19)" value={num} onChange={(e) => setNum(e.target.value)} />
           <select className="select" value={area} onChange={(e) => setArea(e.target.value)}>
             <option value="">— Area (opsional) —</option>
             {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}

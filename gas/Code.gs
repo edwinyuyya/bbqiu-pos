@@ -176,14 +176,15 @@ function setup() {
     });
   }
 
+  // Meja 1 sampai 18 — penomoran polos, sama dengan yang tercetak di QR meja.
   if (readObjects_('Tables').length === 0) {
-    ['1', '2', 'VIP-1'].forEach(function (n) {
+    for (var n = 1; n <= 18; n++) {
       append_('Tables', {
-        id: Utilities.getUuid(), table_number: n,
-        token: 'meja-' + n.toLowerCase() + '-' + Utilities.getUuid().slice(0, 8),
+        id: Utilities.getUuid(), table_number: String(n),
+        token: 'meja-' + n + '-' + Utilities.getUuid().slice(0, 8),
         active: true,
       });
-    });
+    }
   }
   return 'Setup selesai. Silakan deploy sebagai Web App.';
 }

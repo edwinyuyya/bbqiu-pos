@@ -39,7 +39,10 @@ Apps Script (backend Google Sheets, storage Google Drive), lihat
 ## Setup
 1. Buat project di [supabase.com](https://supabase.com).
 2. Jalankan isi `schema.sql` di **Supabase → SQL Editor** (membuat tabel +
-   3 station + contoh menu + contoh meja).
+   3 station + contoh menu + meja 1–18).
+   - Database yang sudah jalan dengan layout meja lama (Outdoor/AC/VIP):
+     jalankan `supabase/meja-1-18.sql` untuk pindah ke penomoran 1–18,
+     lalu cetak ulang QR meja.
 3. Salin `env.example` → `.env.local` dan isi:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_BASE_URL` (mis. `https://restoran.vercel.app`) — agar link QR absolut

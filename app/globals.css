@@ -389,8 +389,14 @@ a { color: inherit; text-decoration: none; }
 .label-60 .harga  { font-size: 20pt; margin-top: auto; }
 .label-60 .kaki   { font-size: 6pt; margin-top: 1mm; }
 
+/* @page-nya SENGAJA tidak di sini, melainkan di komponen LabelHargaStyle
+   yang hanya dipasang di rute label harga.
+   @page berlaku ke seluruh dokumen dan tidak bisa dibatasi per elemen, jadi
+   "size: A4" di berkas ini akan menang atas "size: 58mm auto" di atas —
+   aturan yang datang belakangan menang — dan SEMUA cetakan termal ikut
+   dilayout di atas A4 lalu diperkecil printer. Akibatnya nyata: label QR
+   meja tercetak sekitar 13mm dan QR-nya tidak bisa discan. */
 @media print {
-  @page { size: A4; margin: 8mm; }
   .lembar-label { gap: 3mm; }
   /* Garis bantu potong tetap dicetak tipis abu-abu supaya gunting punya
      acuan; tanpa itu label terpotong miring dan terlihat murahan. */

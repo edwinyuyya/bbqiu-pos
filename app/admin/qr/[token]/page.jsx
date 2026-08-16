@@ -3,6 +3,7 @@ import { supabaseServer } from '../../../../lib/supabaseServer';
 import { getBaseUrl } from '../../../../lib/baseUrl';
 import QrLabelStyle from '../../../components/QrLabelStyle';
 import QrPrintButton from './QrPrintButton';
+import CetakLabelMeja from './CetakLabelMeja';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +26,17 @@ export default async function QrCardPage({ params }) {
   const dataUrl = await QRCode.toDataURL(link, { width: 600, margin: 1 });
   const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'Restoran';
 
+  // Matriks modul QR untuk jalur cetak termal (ESC/POS raster).
+  const qr = QRCode.create(link, { errorCorrectionLevel: 'M' });
+  const modul = Array.from(qr.modules.data, (b) => (b ? 1 : 0));
+
   return (
     <div className="container-sm" style={{ paddingTop: 16 }}>
       <QrLabelStyle />
+      <CetakLabelMeja
+        merchant={merchant} tableNumber={table.table_number}
+        modul={modul} size={qr.modules.size} link={link}
+      />
       <QrPrintButton />
       <div className="qr-label">
         <div className="merchant">{merchant}</div>

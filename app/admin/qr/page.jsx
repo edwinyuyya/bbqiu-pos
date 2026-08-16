@@ -4,6 +4,7 @@ import { getBaseUrl } from '../../../lib/baseUrl';
 import { bandingNomorMeja } from '../../../lib/urutMeja';
 import QrLabelStyle from '../../components/QrLabelStyle';
 import QrPrintButton from './[token]/QrPrintButton';
+import CetakSemuaLabel from './CetakSemuaLabel';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,12 +35,23 @@ export default async function QrAllPage() {
       area: t.area,
       qr: await QRCode.toDataURL(`${base}/meja/${t.token}`, { width: 600, margin: 1 }),
       link: `${base}/meja/${t.token}`,
+      // Matriks modul untuk jalur cetak termal (ESC/POS raster).
+      ...(() => {
+        const m = QRCode.create(`${base}/meja/${t.token}`, { errorCorrectionLevel: 'M' });
+        return { modul: Array.from(m.modules.data, (b) => (b ? 1 : 0)), size: m.modules.size };
+      })(),
     }))
   );
 
   return (
     <div className="container-sm" style={{ paddingTop: 16 }}>
       <QrLabelStyle />
+      <CetakSemuaLabel
+        merchant={merchant}
+        labels={labels.map((l) => ({
+          tableNumber: l.table_number, modul: l.modul, size: l.size, link: l.link,
+        }))}
+      />
       <QrPrintButton />
       <p className="muted small no-print" style={{ marginBottom: 12 }}>
         {labels.length} label QR meja — tiap meja jadi 1 halaman/potongan cetak terpisah.

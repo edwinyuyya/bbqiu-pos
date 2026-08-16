@@ -1,5 +1,6 @@
 import { supabaseServer } from '../../../lib/supabaseServer';
 import PinGate from '../../components/PinGate';
+import LabelHargaStyle from '../../components/LabelHargaStyle';
 import LabelClient from './LabelClient';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ export default async function LabelHargaPage() {
 
   return (
     <PinGate scope="admin" title="Masuk Admin">
+      <LabelHargaStyle />
       <LabelClient
         categories={c.data || []}
         items={m.data || []}

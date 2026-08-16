@@ -138,28 +138,34 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Label QR meja (kartu, BUKAN struk termal) ----------
    Dulu label ini ikut memakai .ticket, jadi kena aturan struk: kertas
    58mm dengan tinggi auto dan QR dipangkas 36mm. Hasil cetaknya sempit
-   memanjang dan QR-nya gepeng. Label meja ditempel di meja, bukan
-   disobek dari roll termal, jadi ukurannya dikunci sendiri di sini
-   dan QR-nya dijaga tetap bujur sangkar. */
+   memanjang dan QR-nya gepeng, jadi ukurannya dikunci sendiri di sini
+   dan QR-nya dijaga tetap bujur sangkar.
+
+   Ukurannya mengikuti kertas termal 58mm — printer yang benar-benar ada di
+   warung. Kertas 58mm hanya tercetak selebar 48mm; label 70mm sebelumnya
+   terpotong 22mm dan QR-nya sendiri (52mm) kehilangan 4mm di sisi kanan,
+   yang membuatnya tidak bisa discan sama sekali. */
 .qr-label {
   background: #fff; color: #000;
-  width: 70mm; box-sizing: border-box;
-  margin: 0 auto 14px; padding: 5mm 4mm;
-  border: 1px dashed #bbb; border-radius: 3mm;
+  width: 48mm; box-sizing: border-box;
+  margin: 0 auto 14px; padding: 3mm 2mm;
+  border: 1px dashed #bbb; border-radius: 2mm;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   text-align: center;
 }
-.qr-label .merchant { font-size: 12px; font-weight: 700; letter-spacing: .4px; }
-.qr-label .meja { font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 1mm; }
-.qr-label .order { font-size: 16px; font-weight: 700; margin-top: 1mm; }
-.qr-label .hint { font-size: 11px; color: #444; margin: 2mm 0; }
+.qr-label .merchant { font-size: 11px; font-weight: 700; letter-spacing: .4px; }
+.qr-label .meja { font-size: 26px; font-weight: 800; line-height: 1.15; margin-top: 1mm; }
+.qr-label .order { font-size: 14px; font-weight: 700; margin-top: 1mm; }
+.qr-label .hint { font-size: 9px; color: #444; margin: 1.5mm 0; }
 /* Bujur sangkar dikunci lewat aspect-ratio, bukan tinggi tetap, supaya
-   tetap kotak walau printer menskalakan halaman. */
+   tetap kotak walau printer menskalakan halaman. 40mm menyisakan 2mm di
+   kiri-kanan terhadap area cetak 48mm — QR yang mepet tepi kertas sering
+   gagal dibaca karena pemindai butuh margin putih di sekelilingnya. */
 .qr-label img {
-  width: 52mm; aspect-ratio: 1 / 1; height: auto;
+  width: 40mm; aspect-ratio: 1 / 1; height: auto;
   display: block; margin: 0 auto;
 }
-.qr-label .link { font-size: 8px; color: #555; word-break: break-all; margin-top: 2mm; }
+.qr-label .link { font-size: 7px; color: #555; word-break: break-all; margin-top: 1.5mm; }
 
 @media print {
   .qr-label {

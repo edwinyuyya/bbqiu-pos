@@ -32,9 +32,9 @@ Apps Script (backend Google Sheets, storage Google Drive), lihat
 - **Kasir** (`/cashier`): lihat bill aktif, tandai lunas, tutup/batalkan bill,
   cetak ulang struk dapur.
 - **Input Order kasir**: dua langkah — pilih meja lalu pilih menu. Meja yang
-  billnya belum ditutup tidak bisa dipilih. Setelah order jadi, barcode meja
-  bisa langsung dicetak (`/cashier/barcode/[orderId]`) lengkap dengan nomor
-  meja dan nomor pesanan.
+  billnya belum ditutup tidak bisa dipilih. Barcode meja bisa dicetak kapan
+  saja dari kartu meja atau sesudah order jadi (`/cashier/barcode/[token]`,
+  token meja) — nomor pesanan ikut tercetak kalau meja itu punya bill jalan.
 - **Kitchen Display** (`/kitchen`): tiket masuk per station, auto-refresh,
   tandai item `ready`/`served`, filter per station.
 - **Cetak dapur 1 printer → 3 station** (`/kitchen/print/[orderId]`): satu

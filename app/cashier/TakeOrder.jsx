@@ -321,7 +321,10 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
       });
       const data = await bacaJson(res);
       if (!res.ok) throw new Error(data.error || 'Gagal membuat order');
-      setResult({ order_id: data.order_id, order_no: data.order_no, table_number: table.table_number });
+      setResult({
+        order_id: data.order_id, order_no: data.order_no,
+        table_number: table.table_number, table_token: table.token,
+      });
     } catch (e) {
       setError(e.message);
     }
@@ -346,7 +349,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           </p>
         )}
         <div className="col" style={{ gap: 8, marginTop: 10 }}>
-          <Link href={`/cashier/barcode/${result.order_id}`} target="_blank" className="btn btn-brand btn-block">
+          <Link href={`/cashier/barcode/${result.table_token}`} target="_blank" className="btn btn-brand btn-block">
             🔳 Cetak Barcode Meja (Meja {result.table_number} · #{result.order_no})
           </Link>
           <Link href={`/order/${result.order_id}`} target="_blank" className="btn btn-block">Buka Halaman Order (QRIS/status)</Link>
@@ -401,22 +404,32 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
             {daftarMeja.map((t) => {
               const isi = terpakai[t.id];
               return (
-                <button
-                  key={t.id}
-                  className={`btn ${tableId === t.id ? 'btn-brand' : ''}`}
-                  disabled={!!isi}
-                  style={{
-                    flexDirection: 'column', gap: 4, padding: '14px 8px',
-                    opacity: isi ? 0.55 : 1, cursor: isi ? 'not-allowed' : 'pointer',
-                  }}
-                  onClick={() => pilihMeja(t)}
-                >
-                  <span className="bold" style={{ fontSize: 18 }}>Meja {t.table_number}</span>
-                  {isi
-                    ? <span className="badge badge-amber">terisi #{isi}</span>
-                    : <span className="badge badge-green">kosong</span>}
-                  {t.seats ? <span className="muted small">{t.seats} kursi</span> : null}
-                </button>
+                <div key={t.id} className="col" style={{ gap: 4 }}>
+                  <button
+                    className={`btn ${tableId === t.id ? 'btn-brand' : ''}`}
+                    disabled={!!isi}
+                    style={{
+                      flexDirection: 'column', gap: 4, padding: '14px 8px',
+                      opacity: isi ? 0.55 : 1, cursor: isi ? 'not-allowed' : 'pointer',
+                    }}
+                    onClick={() => pilihMeja(t)}
+                  >
+                    <span className="bold" style={{ fontSize: 18 }}>Meja {t.table_number}</span>
+                    {isi
+                      ? <span className="badge badge-amber">terisi #{isi}</span>
+                      : <span className="badge badge-green">kosong</span>}
+                    {t.seats ? <span className="muted small">{t.seats} kursi</span> : null}
+                  </button>
+                  {/* Meja terisi tidak bisa dipilih, tapi barcodenya tetap boleh
+                      dicetak ulang — kertas di meja hilang atau sobek itu wajar,
+                      dan tamunya masih duduk di sana. */}
+                  <Link
+                    href={`/cashier/barcode/${t.token}`} target="_blank"
+                    className="btn" style={{ padding: '4px 8px', fontSize: 12 }}
+                  >
+                    🔳 Barcode
+                  </Link>
+                </div>
               );
             })}
           </div>

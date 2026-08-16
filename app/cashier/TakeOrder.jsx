@@ -158,6 +158,9 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [cari, setCari] = useState('');
+  const [asal, setAsal] = useState(''); // origin untuk isi barcode; kosong saat SSR
+
+  useEffect(() => { setAsal(window.location.origin); }, []);
 
   // Meja yang billnya belum ditutup dianggap masih dipakai. Diambil terpisah
   // supaya bisa disegarkan ulang tiap kali kasir kembali ke langkah pilih meja
@@ -278,11 +281,17 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
     muatTerpakai();
   }
 
+  // Setelah meja dipilih, barcodenya dulu — baru menu.
+  //
+  // Barcode itu satu-satunya cara tamu memanggil waiter dari mejanya. Kalau
+  // langkah ini ditaruh setelah order jadi, kasir yang sedang buru-buru
+  // melewatkannya, dan tamu baru sadar tidak bisa memanggil siapa pun ketika
+  // sudah butuh sesuatu.
   function pilihMeja(t) {
     if (terpakai[t.id]) return;
     setTableId(t.id);
     setError('');
-    setTabInput('menu');
+    setTabInput('barcode');
   }
 
   async function submit() {
@@ -378,12 +387,58 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           1. Pilih Meja{mejaTerpilih ? ` · Meja ${mejaTerpilih.table_number}` : ''}
         </button>
         <button
+          className={`btn ${tabInput === 'barcode' ? 'btn-brand' : ''}`}
+          disabled={!!tambahKe || !mejaTerpilih}
+          onClick={() => setTabInput('barcode')}
+        >
+          2. Barcode Meja
+        </button>
+        <button
           className={`btn ${tabInput === 'menu' ? 'btn-brand' : ''}`}
           onClick={() => setTabInput('menu')}
         >
-          2. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
+          3. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
         </button>
       </div>
+
+      {tabInput === 'barcode' && mejaTerpilih && (
+        <div className="card">
+          <div className="h2" style={{ marginBottom: 4 }}>
+            🔖 Barcode Meja {mejaTerpilih.table_number}
+          </div>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Cetak dan taruh di mejanya <b>sebelum</b> mencatat pesanan. Lewat barcode
+            ini tamu memanggil waiter dan melihat pesanannya sendiri.
+          </p>
+
+          <div className="row" style={{ flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
+            {asal && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/qr?size=180&data=${encodeURIComponent(`${asal}/meja/${mejaTerpilih.token}`)}`}
+                alt={`Barcode meja ${mejaTerpilih.table_number}`}
+                style={{ width: 150, height: 150, background: '#fff', padding: 8, borderRadius: 10 }}
+              />
+            )}
+            <div className="col" style={{ gap: 8, minWidth: 220, flex: 1 }}>
+              <Link href={`/admin/qr/${mejaTerpilih.token}`} target="_blank"
+                className="btn btn-brand btn-block">
+                🖨️ Cetak Barcode Meja {mejaTerpilih.table_number}
+              </Link>
+              <Link href={`/meja/${mejaTerpilih.token}`} target="_blank" className="btn btn-block">
+                👁️ Lihat yang dilihat tamu
+              </Link>
+              <button className="btn btn-block" onClick={() => setTabInput('menu')}>
+                Lanjut ke Menu →
+              </button>
+              <button className="btn" style={{ padding: '4px 10px', fontSize: 13 }}
+                onClick={() => { setTabInput('meja'); muatTerpakai(); }}>
+                ← Ganti meja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tabInput === 'meja' && (
         <div className="card">

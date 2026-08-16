@@ -183,9 +183,22 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
   // Mengunci satu menu dari SEMUA kode promo. Dipakai untuk paket dan menu
   // harga khusus: harganya sudah dipotong di muka, jadi kena promo lagi
   // berarti dijual di bawah modal.
+  //
+  // Membuka kunci WAJIB dikonfirmasi. Tombol ini dulu berupa saklar yang
+  // labelnya sekaligus menunjukkan keadaannya ("Bebas promo: YA/TIDAK"), jadi
+  // siapa pun yang menekannya sekadar untuk memeriksa justru membalikkannya.
+  // Itu benar-benar terjadi: sepuluh menu terkunci — termasuk kedua paket —
+  // terbuka semua hanya karena diperiksa satu per satu, dan baru ketahuan
+  // sehari sebelum promo 50% berjalan.
   async function togglePromo(it) {
+    const terkunci = it.promo_eligible === false;
+    if (terkunci && !confirm(
+      `Izinkan "${it.name}" ikut kena kode promo?\n\n` +
+      'Menu ini sekarang terlindung dari SEMUA kode promo. Kalau dibuka, ' +
+      'promo berikutnya akan memotong harganya.'
+    )) return;
     await supabase.from('menu_items')
-      .update({ promo_eligible: it.promo_eligible === false })
+      .update({ promo_eligible: terkunci })
       .eq('id', it.id);
     reload();
   }
@@ -321,8 +334,9 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                         </span>
                       )}
                       {it.promo_eligible === false && (
-                        <span className="badge badge-red" style={{ marginLeft: 6 }}>
-                          🔒 bebas promo
+                        <span className="badge badge-red" style={{ marginLeft: 6 }}
+                          title="Tidak akan kena kode promo apa pun">
+                          🔒 terkunci dari promo
                         </span>
                       )}
                       {it.needs_fry_first && (
@@ -365,12 +379,14 @@ function MenuTab({ items, categories, stations, inventory, reload }) {
                       {it.needs_fry_first ? '🍳 Goreng dulu: YA' : '🍳 Goreng dulu: TIDAK'}
                     </button>
                   )}
+                  {/* Tulisannya perbuatan, bukan keadaan. Keadaannya dibaca dari
+                      lencana di atas, jadi memeriksa tidak lagi berarti mengubah. */}
                   <button
                     className="btn" style={{ padding: '6px 10px', fontSize: 13 }}
                     onClick={() => togglePromo(it)}
-                    title="Kalau dikunci, menu ini tidak pernah kena kode promo apa pun — sekarang maupun promo yang dibuat nanti"
+                    title="Menu yang dikunci tidak pernah kena kode promo apa pun — sekarang maupun promo yang dibuat nanti"
                   >
-                    {it.promo_eligible === false ? '🔒 Bebas promo: YA' : '🔒 Bebas promo: TIDAK'}
+                    {it.promo_eligible === false ? '🔓 Izinkan kena promo' : '🔒 Kunci dari promo'}
                   </button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => toggle(it)}>{it.available ? 'Set habis' : 'Set tersedia'}</button>
                   <button className="btn" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => del(it)}>Hapus</button>

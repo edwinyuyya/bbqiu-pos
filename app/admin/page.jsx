@@ -86,6 +86,7 @@ function AdminPage() {
         <button className={`btn ${tab === 'tables' ? 'btn-brand' : ''}`} onClick={() => setTab('tables')}>Meja &amp; QR</button>
         <button className={`btn ${tab === 'menu' ? 'btn-brand' : ''}`} onClick={() => setTab('menu')}>Menu</button>
         <button className={`btn ${tab === 'promo' ? 'btn-brand' : ''}`} onClick={() => setTab('promo')}>🎟 Promo</button>
+        <Link href="/admin/pelanggan" className="btn">👥 Pelanggan</Link>
         <Link href="/admin/label-harga" className="btn">🏷️ Label Harga</Link>
       </div>
 

@@ -39,6 +39,36 @@ export async function GET(req) {
     return NextResponse.json({ customers: (data || []).map(ringkas) });
   }
 
+  // Daftar lengkap untuk halaman admin. Total belanja dan kunjungan terakhir
+  // ikut dihitung di sini supaya halamannya tidak perlu memanggil profil satu
+  // per satu untuk ratusan pelanggan.
+  if (url.searchParams.get('semua') === '1') {
+    const { data: cs } = await db.from('customers').select('*')
+      .order('visit_count', { ascending: false }).order('name');
+
+    const { data: ords } = await db.from('orders')
+      .select('customer_id, total, created_at')
+      .not('customer_id', 'is', null)
+      .neq('status', 'cancelled');
+
+    const per = {};
+    for (const o of ords || []) {
+      const p = (per[o.customer_id] ||= { belanja: 0, bill: 0, terakhir: null });
+      p.belanja += Number(o.total || 0);
+      p.bill += 1;
+      if (!p.terakhir || o.created_at > p.terakhir) p.terakhir = o.created_at;
+    }
+
+    return NextResponse.json({
+      customers: (cs || []).map((c) => ({
+        ...ringkas(c),
+        total_belanja: per[c.id]?.belanja || 0,
+        jml_bill: per[c.id]?.bill || 0,
+        terakhir_datang: per[c.id]?.terakhir || null,
+      })),
+    });
+  }
+
   return NextResponse.json({ customers: [] });
 }
 

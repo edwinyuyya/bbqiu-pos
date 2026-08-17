@@ -608,3 +608,31 @@ create policy "allow all settings" on settings for all using (true) with check (
 
 grant select, insert, update, delete on fixed_costs, settings to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- ============================================================
+--  PELANGGAN (program kunjungan & ulang tahun)
+-- ============================================================
+create table if not exists customers (
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null,
+  phone        text not null,          -- SELALU ternormalisasi: 62xxxxxxxxx
+  birth_date   date,
+  visit_count  int  not null default 0,
+  last_visit_on date,                  -- penjaga "1 kunjungan per hari"
+  reward_claimed_at timestamptz,       -- hadiah kunjungan ke-3, sekali seumur pelanggan
+  reward_item  text,
+  note         text,
+  created_at   timestamptz default now()
+);
+-- Nomor WA adalah identitasnya. Tanpa unik, satu tamu bisa terdaftar dua kali
+-- dan jejak kunjungannya terpecah sehingga hadiahnya tidak pernah tercapai.
+create unique index if not exists idx_customers_phone on customers(phone);
+create index if not exists idx_customers_ulangtahun
+  on customers((extract(month from birth_date)), (extract(day from birth_date)));
+
+alter table orders add column if not exists customer_id uuid references customers(id);
+create index if not exists idx_orders_customer on orders(customer_id);
+
+alter table customers enable row level security;
+drop policy if exists "allow all customers" on customers;
+create policy "allow all customers" on customers for all using (true) with check (true);

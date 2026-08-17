@@ -19,7 +19,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Body tidak valid' }, { status: 400 });
   }
 
-  const { token, customer_name, note, payment_method, items } = body || {};
+  const { token, customer_name, note, payment_method, items, customer_id } = body || {};
 
   if (!token) return NextResponse.json({ error: 'Token meja wajib' }, { status: 400 });
   if (!Array.isArray(items) || items.length === 0)
@@ -106,10 +106,15 @@ export async function POST(req) {
         { error: `Pilih es/panas dan tingkat manis untuk "${m.name}".` },
         { status: 400 }
       );
+    // Menu hadiah masuk sebagai baris order sungguhan berharga 0, bukan
+    // catatan di note: dapur tetap menerima perintah masaknya dan stok
+    // bahannya tetap terpotong. Kalau hanya dicatat, hadiah jadi kebocoran
+    // stok yang tak terlacak.
+    const hadiah = it.hadiah === true;
     lineItems.push({
       menu_item_id: m.id,
-      name: m.name,
-      price: Number(m.price),
+      name: hadiah ? `${m.name} (HADIAH)` : m.name,
+      price: hadiah ? 0 : Number(m.price),
       qty,
       note: (it.note || '').toString().slice(0, 200) || null,
       station_id: station,
@@ -267,6 +272,7 @@ export async function POST(req) {
         tax,
         total: tambahanSubtotal + tax,
         customer_name: (customer_name || '').toString().slice(0, 80) || null,
+        customer_id: customer_id || null,
         note: (note || '').toString().slice(0, 300) || null,
       })
       .select()
@@ -294,6 +300,32 @@ export async function POST(req) {
   // Hitung ulang lewat jalur yang sama dengan promo & pembatalan item, supaya
   // diskon per menu langsung terpasang dan tidak ada dua rumus total.
   await recalcOrder(db, order.id);
+
+  // Catat kunjungan pelanggan — SATU per hari, berapa pun bill yang dibuat.
+  //
+  // Dihitung saat order dibuat, bukan saat bill ditutup: bill yang lupa
+  // ditutup akan menghapus kunjungan yang benar-benar terjadi, dan hadiah
+  // kunjungan ke-3 harus sudah bisa ditawarkan pada kunjungan itu juga,
+  // bukan baru pada kedatangan berikutnya.
+  //
+  // Penjaganya perbandingan tanggal WIB di kolom last_visit_on, jadi tamu yang
+  // memesan tiga kali dalam semalam tetap dihitung sekali.
+  if (customer_id && !reservasi) {
+    const hariIni = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    const { data: pel } = await db
+      .from('customers').select('id, visit_count, last_visit_on').eq('id', customer_id).maybeSingle();
+    if (pel && pel.last_visit_on !== hariIni) {
+      await db.from('customers').update({
+        visit_count: Number(pel.visit_count || 0) + 1,
+        last_visit_on: hariIni,
+      }).eq('id', pel.id);
+    }
+    // Bill yang tadinya dibuat tanpa pelanggan ikut ditautkan, supaya
+    // riwayatnya tidak berlubang.
+    if (!order.customer_id) {
+      await db.from('orders').update({ customer_id }).eq('id', order.id);
+    }
+  }
 
   // 7) Kurangi sisa porsi (menu berporsi terbatas). Auto-tutup saat 0.
   for (const m of reservasi ? [] : (menu || [])) {

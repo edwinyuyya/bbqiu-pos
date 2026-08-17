@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/expiry", "schedule": "0 1 * * *" },
-    { "path": "/api/cron/daily-report", "schedule": "30 14 * * *" }
+    { "path": "/api/cron/daily-report", "schedule": "30 14 * * *" },
+    { "path": "/api/cron/ulang-tahun", "schedule": "0 2 * * *" }
   ]
 }

@@ -7,6 +7,8 @@ import { taxPercent } from '../../lib/tax';
 import { cocok } from '../../lib/cari';
 import { urutkanMeja } from '../../lib/urutMeja';
 import { bacaJson } from '../../lib/bacaJson';
+import PilihPelanggan from './PilihPelanggan';
+import { MENU_HADIAH, KUNJUNGAN_HADIAH } from '../../lib/pelanggan';
 import {
   COOK_METHODS,
   DRINK_TEMPS,
@@ -146,7 +148,11 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   // Input order jadi dua langkah: pilih meja dulu, baru menu. Meja yang salah
   // baru ketahuan setelah struk dapur tercetak, jadi langkahnya dipisah supaya
   // tidak terlewat sambil buru-buru mengetuk menu.
-  const [tabInput, setTabInput] = useState('meja'); // meja | menu
+  // Pelanggan dulu, baru meja. Kalau ditaruh belakangan, kasir yang sedang
+  // dikejar antrian melewatinya — dan jejak kunjungan tamu hilang diam-diam.
+  const [tabInput, setTabInput] = useState('pelanggan'); // pelanggan | meja | barcode | menu
+  const [pelanggan, setPelanggan] = useState(null);
+  const [hadiah, setHadiah] = useState('');   // menu hadiah yang dipilih tamu
   const [tableId, setTableId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [payment, setPayment] = useState('cashier');
@@ -197,7 +203,8 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   useEffect(() => {
     if (tambahKe?.table_id && tables.length) {
       setTableId(tambahKe.table_id);
-      // Mejanya sudah pasti, langkah pilih meja tidak ada gunanya lagi.
+      // Mejanya sudah pasti, dan pelanggannya sudah tercatat di bill itu —
+      // dua langkah awal tidak ada gunanya lagi.
       setTabInput('menu');
     }
   }, [tambahKe, tables]);
@@ -277,7 +284,8 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   function reset() {
     setCart({}); setNotes({}); setCustomerName(''); setTableId('');
     setPayment('cashier'); setResult(null); setError(''); setCari(''); setKategoriAktif('');
-    setTabInput('meja');
+    setTabInput('pelanggan');
+    setPelanggan(null); setHadiah('');
     muatTerpakai();
   }
 
@@ -316,20 +324,37 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           // Kalau menambah ke bill tertentu, tunjuk billnya langsung supaya
           // tidak tertebak salah oleh sistem.
           order_id: tambahKe?.id || undefined,
-          customer_name: customerName,
+          customer_name: customerName || pelanggan?.name || '',
+          customer_id: pelanggan?.id || null,
           payment_method: payment,
-          items: cartLines.map((l) => ({
-            menu_item_id: l.item.id,
-            qty: l.qty,
-            note: l.note,
-            cook_method: l.method,
-            drink_temp: l.temp,
-            sweetness: l.sweet,
-          })),
+          items: [
+            ...cartLines.map((l) => ({
+              menu_item_id: l.item.id,
+              qty: l.qty,
+              note: l.note,
+              cook_method: l.method,
+              drink_temp: l.temp,
+              sweetness: l.sweet,
+            })),
+            ...(menuHadiah ? [{ menu_item_id: menuHadiah.id, qty: 1, hadiah: true }] : []),
+          ],
         }),
       });
       const data = await bacaJson(res);
       if (!res.ok) throw new Error(data.error || 'Gagal membuat order');
+
+      // Hadiah ditandai terpakai SESUDAH ordernya benar-benar jadi. Kalau
+      // ditandai lebih dulu lalu ordernya gagal, hak tamu hangus tanpa dia
+      // pernah menerima apa pun.
+      if (menuHadiah && pelanggan?.id) {
+        try {
+          await fetch(`/api/customers/${pelanggan.id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ klaim_hadiah: menuHadiah.name }),
+          });
+        } catch { /* hadiah sudah terlanjur masuk order; jangan gagalkan kasir */ }
+      }
+
       setResult({ order_id: data.order_id, order_no: data.order_no, table_number: table.table_number });
     } catch (e) {
       setError(e.message);
@@ -380,26 +405,40 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
 
       <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
         <button
+          className={`btn ${tabInput === 'pelanggan' ? 'btn-brand' : ''}`}
+          disabled={!!tambahKe}
+          onClick={() => setTabInput('pelanggan')}
+        >
+          1. Pelanggan{pelanggan ? ` · ${pelanggan.name}` : ''}
+        </button>
+        <button
           className={`btn ${tabInput === 'meja' ? 'btn-brand' : ''}`}
           disabled={!!tambahKe}
           onClick={() => { setTabInput('meja'); muatTerpakai(); }}
         >
-          1. Pilih Meja{mejaTerpilih ? ` · Meja ${mejaTerpilih.table_number}` : ''}
+          2. Pilih Meja{mejaTerpilih ? ` · Meja ${mejaTerpilih.table_number}` : ''}
         </button>
         <button
           className={`btn ${tabInput === 'barcode' ? 'btn-brand' : ''}`}
           disabled={!!tambahKe || !mejaTerpilih}
           onClick={() => setTabInput('barcode')}
         >
-          2. Barcode Meja
+          3. Barcode Meja
         </button>
         <button
           className={`btn ${tabInput === 'menu' ? 'btn-brand' : ''}`}
           onClick={() => setTabInput('menu')}
         >
-          3. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
+          4. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
         </button>
       </div>
+
+      {tabInput === 'pelanggan' && (
+        <PilihPelanggan
+          onPilih={(c) => { setPelanggan(c); setTabInput('meja'); muatTerpakai(); }}
+          onLewati={() => { setPelanggan(null); setTabInput('meja'); muatTerpakai(); }}
+        />
+      )}
 
       {tabInput === 'barcode' && mejaTerpilih && (
         <div className="card">
@@ -607,6 +646,33 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
               </>
             )}
           </div>
+
+          {pelanggan?.berhak_hadiah && (
+            <div className="card" style={{ padding: 12, borderColor: '#d99411' }}>
+              <div className="bold">🎁 Hadiah kunjungan ke-{KUNJUNGAN_HADIAH}</div>
+              <p className="muted small" style={{ margin: '4px 0 8px' }}>
+                {pelanggan.name} sudah datang {pelanggan.visit_count}×. Tawarkan satu menu gratis.
+              </p>
+              <div className="opt-row">
+                {MENU_HADIAH.map((h) => (
+                  <button key={h} type="button"
+                    className={`chip ${hadiah === h ? 'chip-on' : ''}`}
+                    onClick={() => setHadiah(hadiah === h ? '' : h)}>
+                    {h}
+                  </button>
+                ))}
+              </div>
+              {hadiah && (
+                <p className="small" style={{ margin: '8px 0 0', color: '#16794a' }}>
+                  ✓ {hadiah} akan masuk order dengan harga Rp 0 dan tercetak ke dapur.
+                </p>
+              )}
+              <p className="muted small" style={{ margin: '8px 0 0' }}>
+                Hadiah hanya sekali seumur pelanggan. Kalau tamu menolak, biarkan kosong —
+                haknya tidak hangus.
+              </p>
+            </div>
+          )}
 
           <div className="card" style={{ padding: 12, borderColor: tambahKe ? 'var(--brand)' : undefined }}>
             {tambahKe && (

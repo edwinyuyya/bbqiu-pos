@@ -1,0 +1,281 @@
+/* Gaya situs publik BBQIU. Sengaja dipisah dari globals.css (yang melayani
+   POS, tema terang) dan seluruh isinya dikurung di dalam .situs supaya tidak
+   ada satu pun aturan di sini yang bocor ke halaman kasir/dapur. */
+
+.situs {
+  --s-bg: #100b09;
+  --s-bg2: #17100d;
+  --s-card: rgba(255, 255, 255, 0.045);
+  --s-line: rgba(255, 255, 255, 0.11);
+  --s-text: #f7efe7;
+  --s-muted: #b4a597;
+  --s-ember: #ff5a36;
+  --s-ember2: #ffb020;
+  --s-gold: #f6c453;
+
+  background: var(--s-bg);
+  color: var(--s-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.situs * { box-sizing: border-box; }
+.situs a { color: inherit; text-decoration: none; }
+.situs h1, .situs h2, .situs h3, .situs h4, .situs p, .situs ul, .situs ol { margin: 0; }
+.situs ul, .situs ol { padding: 0; list-style: none; }
+
+.s-wrap { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+.s-sec { padding: 84px 0; }
+.s-sec-tight { padding: 56px 0; }
+
+/* ---------------------------------------------------------- tipografi */
+.s-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--s-ember2);
+}
+.s-h1 {
+  font-size: clamp(40px, 7.4vw, 78px);
+  line-height: 0.98; font-weight: 900; letter-spacing: -2px;
+}
+.s-h2 {
+  font-size: clamp(28px, 4.4vw, 46px);
+  line-height: 1.06; font-weight: 900; letter-spacing: -1.2px;
+}
+.s-h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+.s-lead { font-size: clamp(16px, 2vw, 19px); line-height: 1.65; color: var(--s-muted); }
+.s-p { font-size: 16px; line-height: 1.75; color: var(--s-muted); }
+.s-api { color: var(--s-text); font-weight: 700; }
+.s-api-ember {
+  background: linear-gradient(100deg, var(--s-ember2), var(--s-ember));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ---------------------------------------------------------- navigasi */
+.s-nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  background: rgba(16, 11, 9, 0.82);
+  border-bottom: 1px solid var(--s-line);
+}
+.s-nav-in { display: flex; align-items: center; gap: 18px; height: 66px; }
+.s-logo { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: -0.5px; font-size: 19px; }
+/* Logo BBQIU memakai huruf hitam, jadi di latar gelap ia harus berdiri di atas
+   kepingan terang — tanpa ini tulisan "BBQIU" praktis hilang. */
+.s-logo img {
+  height: 42px; width: auto; display: block;
+  background: #fff; padding: 6px 10px; border-radius: 12px;
+}
+.s-nav-links { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+.s-nav-links a {
+  padding: 8px 13px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
+  color: var(--s-muted); transition: color .18s ease, background .18s ease;
+}
+.s-nav-links a:hover { color: var(--s-text); background: rgba(255, 255, 255, 0.07); }
+.s-nav-links a.on { color: var(--s-text); background: rgba(255, 255, 255, 0.09); }
+/* Tombol di dalam nav harus lolos dari aturan warna .s-nav-links a di atas —
+   tanpa ini teks tombol oranye ikut jadi abu-abu dan nyaris tak terbaca. */
+.s-nav-links a.s-btn-primary { color: #1a0d06; }
+.s-nav-links a.s-btn-primary:hover { color: #1a0d06; background: linear-gradient(100deg, var(--s-ember2), var(--s-ember)); }
+.s-nav-toggle {
+  display: none; margin-left: auto; background: none; border: 1px solid var(--s-line);
+  color: var(--s-text); border-radius: 10px; padding: 8px 12px; font-size: 16px; cursor: pointer;
+}
+@media (max-width: 900px) {
+  .s-nav-toggle { display: block; }
+  .s-nav-links {
+    display: none; position: absolute; left: 0; right: 0; top: 66px;
+    flex-direction: column; align-items: stretch; gap: 2px; padding: 12px 20px 18px;
+    background: rgba(16, 11, 9, 0.98); border-bottom: 1px solid var(--s-line);
+  }
+  .s-nav-links.open { display: flex; }
+  .s-nav-links .s-btn { margin-top: 6px; }
+}
+
+/* ---------------------------------------------------------- tombol */
+.s-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 14px 26px; border-radius: 999px; border: 1px solid transparent;
+  font-size: 15.5px; font-weight: 800; cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.s-btn-primary {
+  background: linear-gradient(100deg, var(--s-ember2), var(--s-ember));
+  color: #1a0d06;
+  box-shadow: 0 12px 34px -12px rgba(255, 90, 54, 0.75);
+}
+.s-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -12px rgba(255, 90, 54, 0.9); }
+.s-btn-ghost { border-color: var(--s-line); color: var(--s-text); background: rgba(255, 255, 255, 0.04); }
+.s-btn-ghost:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+.s-btn-sm { padding: 10px 18px; font-size: 14px; }
+.s-btns { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* ---------------------------------------------------------- kartu */
+.s-card {
+  background: var(--s-card); border: 1px solid var(--s-line);
+  border-radius: 20px; padding: 26px;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.s-card-hover:hover { transform: translateY(-4px); border-color: rgba(255, 176, 32, 0.45); background: rgba(255, 255, 255, 0.07); }
+.s-grid { display: grid; gap: 18px; }
+.s-g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.s-g3 { grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); }
+.s-g4 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+
+.s-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  background: rgba(255, 176, 32, 0.13); color: var(--s-gold);
+  border: 1px solid rgba(255, 176, 32, 0.28);
+}
+
+/* ---------------------------------------------------------- hero */
+.s-hero { position: relative; padding: 92px 0 76px; overflow: hidden; }
+.s-hero::before {
+  content: ''; position: absolute; inset: -30% -20% auto -20%; height: 720px;
+  background:
+    radial-gradient(58% 52% at 22% 18%, rgba(255, 90, 54, 0.32), transparent 68%),
+    radial-gradient(46% 48% at 82% 8%, rgba(255, 176, 32, 0.22), transparent 66%);
+  filter: blur(18px); pointer-events: none;
+}
+.s-hero-in { position: relative; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 46px; align-items: center; }
+@media (max-width: 940px) { .s-hero-in { grid-template-columns: 1fr; } }
+.s-hero-copy > * + * { margin-top: 22px; }
+
+.s-flame {
+  position: relative; border-radius: 26px; overflow: hidden;
+  border: 1px solid var(--s-line);
+  background:
+    radial-gradient(70% 60% at 50% 108%, rgba(255, 90, 54, 0.55), transparent 70%),
+    linear-gradient(180deg, #1d1310, #120c0a);
+  aspect-ratio: 4 / 5; display: grid; place-items: center; padding: 28px;
+}
+.s-flame-emoji { font-size: clamp(90px, 16vw, 150px); line-height: 1; animation: s-bob 4.5s ease-in-out infinite; }
+.s-flame-cap { position: absolute; left: 22px; right: 22px; bottom: 22px; }
+@keyframes s-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
+
+.s-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+.s-stat-num {
+  font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; letter-spacing: -1.4px;
+  background: linear-gradient(100deg, var(--s-ember2), var(--s-ember));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.s-stat-lbl { font-size: 13px; color: var(--s-muted); margin-top: 4px; }
+
+/* ---------------------------------------------------------- pita */
+.s-band {
+  background: linear-gradient(100deg, var(--s-ember), var(--s-ember2));
+  color: #1a0d06;
+}
+.s-band .s-p, .s-band .s-lead { color: rgba(26, 13, 6, 0.82); }
+.s-marquee {
+  overflow: hidden; border-block: 1px solid var(--s-line);
+  background: var(--s-bg2); padding: 13px 0;
+}
+.s-marquee-track {
+  display: flex; gap: 42px; width: max-content;
+  animation: s-slide 26s linear infinite;
+  font-size: 13.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--s-muted);
+}
+.s-marquee-track span { display: inline-flex; align-items: center; gap: 42px; white-space: nowrap; }
+@keyframes s-slide { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .s-marquee-track, .s-flame-emoji { animation: none; }
+}
+
+/* ---------------------------------------------------------- menu */
+.s-tabs { display: flex; flex-wrap: wrap; gap: 9px; }
+.s-tab {
+  padding: 10px 17px; border-radius: 999px; font-size: 14px; font-weight: 700; cursor: pointer;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--s-line); color: var(--s-muted);
+  transition: all .16s ease;
+}
+.s-tab:hover { color: var(--s-text); }
+.s-tab.on {
+  background: linear-gradient(100deg, var(--s-ember2), var(--s-ember));
+  color: #1a0d06; border-color: transparent;
+}
+.s-menu-row {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 13px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.s-menu-row:last-child { border-bottom: 0; }
+.s-menu-name { font-weight: 700; font-size: 15.5px; }
+.s-dots { flex: 1; border-bottom: 1px dotted rgba(255, 255, 255, 0.22); transform: translateY(-4px); }
+.s-menu-price { font-weight: 800; color: var(--s-gold); white-space: nowrap; }
+
+/* ---------------------------------------------------------- harga mitra */
+.s-price-card { position: relative; display: flex; flex-direction: column; gap: 16px; }
+.s-price-card.pop {
+  border-color: rgba(255, 176, 32, 0.5);
+  background: linear-gradient(180deg, rgba(255, 176, 32, 0.12), rgba(255, 255, 255, 0.03));
+}
+.s-price-tag {
+  position: absolute; top: -13px; right: 20px;
+  background: linear-gradient(100deg, var(--s-ember2), var(--s-ember)); color: #1a0d06;
+  padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 900;
+}
+.s-price-num { font-size: 34px; font-weight: 900; letter-spacing: -1.4px; }
+.s-list li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 14.5px; line-height: 1.6; color: var(--s-muted); padding: 6px 0;
+}
+.s-list li::before { content: '✓'; color: var(--s-ember2); font-weight: 900; flex-shrink: 0; }
+
+/* ---------------------------------------------------------- langkah */
+.s-step { display: flex; gap: 16px; align-items: flex-start; }
+.s-step-num {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px;
+  display: grid; place-items: center; font-weight: 900; font-size: 16px;
+  background: rgba(255, 176, 32, 0.14); color: var(--s-gold);
+  border: 1px solid rgba(255, 176, 32, 0.3);
+}
+
+/* ---------------------------------------------------------- faq */
+.s-faq { border-bottom: 1px solid var(--s-line); }
+.s-faq summary {
+  cursor: pointer; list-style: none; padding: 20px 0;
+  font-weight: 800; font-size: 16.5px; display: flex; gap: 14px; align-items: center;
+}
+.s-faq summary::-webkit-details-marker { display: none; }
+.s-faq summary::after { content: '+'; margin-left: auto; color: var(--s-ember2); font-size: 24px; font-weight: 400; }
+.s-faq[open] summary::after { content: '−'; }
+.s-faq p { padding: 0 0 20px; }
+
+/* ---------------------------------------------------------- form */
+.s-field { display: flex; flex-direction: column; gap: 7px; }
+.s-label { font-size: 13.5px; font-weight: 700; color: var(--s-muted); }
+.s-input, .s-select, .s-textarea {
+  width: 100%; padding: 13px 15px; border-radius: 13px; font-size: 15px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--s-line);
+  color: var(--s-text); font-family: inherit;
+}
+.s-input:focus, .s-select:focus, .s-textarea:focus {
+  outline: none; border-color: var(--s-ember2); background: rgba(255, 255, 255, 0.08);
+}
+.s-textarea { min-height: 100px; resize: vertical; }
+.s-select option { background: #17100d; }
+
+/* ---------------------------------------------------------- footer */
+.s-footer { border-top: 1px solid var(--s-line); background: var(--s-bg2); padding: 52px 0 34px; }
+.s-footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 34px; }
+@media (max-width: 780px) { .s-footer-grid { grid-template-columns: 1fr; } }
+.s-footer h4 { font-size: 13px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--s-muted); margin-bottom: 14px; }
+.s-footer li { padding: 5px 0; font-size: 14.5px; color: var(--s-muted); }
+.s-footer li a:hover { color: var(--s-text); }
+.s-footer-btm {
+  margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--s-line);
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between;
+  font-size: 13px; color: var(--s-muted);
+}
+
+/* CTA melayang khusus layar kecil */
+.s-float {
+  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 60; display: none;
+}
+@media (max-width: 700px) {
+  .s-float { display: block; }
+  .s-float .s-btn { width: 100%; }
+  .s-sec { padding: 62px 0; }
+}

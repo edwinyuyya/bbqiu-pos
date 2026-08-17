@@ -54,6 +54,18 @@ export default function Home() {
 
       <SoldOutBanner />
 
+      <Link
+        href="/bbqiu"
+        className="card"
+        style={{ display: 'block', marginBottom: 16, borderColor: 'var(--brand)' }}
+      >
+        <div className="h2">🌐 Website BBQIU (halaman publik)</div>
+        <p className="muted small" style={{ margin: '8px 0 0' }}>
+          Profil, menu &amp; harga, produk unggulan, dan peluang kerjasama — halaman
+          yang dibagikan ke pelanggan dan calon mitra.
+        </p>
+      </Link>
+
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
         {links.map((l) => (
           <Link key={l.href} href={l.href} className="card" style={{ display: 'block' }}>

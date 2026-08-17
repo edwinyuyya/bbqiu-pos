@@ -43,6 +43,27 @@ Apps Script (backend Google Sheets, storage Google Drive), lihat
 - **Admin** (`/admin`): kelola meja + generate/cetak QR meja, kelola menu &
   assign station.
 
+## Website publik BBQIU (`/bbqiu`)
+Selain aplikasi operasional, repo ini memuat situs publik yang dibagikan ke
+pelanggan dan calon mitra:
+
+| Halaman | Isi |
+|---------|-----|
+| `/bbqiu` | Beranda: hero, alasan memilih BBQIU, produk unggulan, teaser kemitraan |
+| `/bbqiu/tentang` | Cerita, nilai, standar dapur, perjalanan |
+| `/bbqiu/menu` | 79 item dengan pencarian & filter kategori |
+| `/bbqiu/produk` | Lima lini produk + Paket Value Set |
+| `/bbqiu/kemitraan` | Skema kerjasama, paket mitra, proses, FAQ, form ke WhatsApp |
+| `/bbqiu/kontak` | Jam buka, lokasi, kanal WhatsApp per kebutuhan |
+
+Semua teks, harga, dan data kemitraan ada di **satu file**: `lib/situs.js`.
+Gayanya di `app/bbqiu/situs.css` (dikurung di `.situs`, tidak menyentuh POS).
+
+**Sebelum dipublikasikan, isi env berikut** — kalau kosong, situs memakai nilai
+contoh: `NEXT_PUBLIC_WA_NUMBER`, `NEXT_PUBLIC_IG`, `NEXT_PUBLIC_EMAIL_CS`,
+`NEXT_PUBLIC_ALAMAT`. Angka investasi kemitraan di `lib/situs.js` (`PAKET_MITRA`)
+juga masih **angka contoh** dan wajib diganti dengan penawaran resmi.
+
 ## Setup
 1. Buat project di [supabase.com](https://supabase.com).
 2. Jalankan isi `schema.sql` di **Supabase → SQL Editor** (membuat tabel +

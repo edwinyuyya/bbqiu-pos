@@ -436,6 +436,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
       {tabInput === 'pelanggan' && (
         <PilihPelanggan
           onPilih={(c) => { setPelanggan(c); setTabInput('meja'); muatTerpakai(); }}
+          onTolak={() => { setPelanggan(null); setHadiah(''); setTabInput('meja'); muatTerpakai(); }}
         />
       )}
 

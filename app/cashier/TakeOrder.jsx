@@ -394,6 +394,12 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   }
 
   const mejaTerpilih = tables.find((t) => t.id === tableId);
+
+  // Menu hadiah dicocokkan dari daftar menu asli, bukan dibuat baru — supaya
+  // resep dan stoknya ikut terpotong seperti penjualan biasa.
+  const menuHadiah = hadiah
+    ? menuItems.find((m) => m.name.toLowerCase() === hadiah.toLowerCase()) || null
+    : null;
   const daftarMeja = urutkanMeja(tables);
   const mejaKosong = daftarMeja.filter((t) => !terpakai[t.id]).length;
 

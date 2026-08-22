@@ -8,6 +8,7 @@ import FaceCapture from '../components/FaceCapture';
 import CariBox from '../components/CariBox';
 import TakeOrder from './TakeOrder';
 import PindahMeja from './PindahMeja';
+import KirimNotaWA from './KirimNotaWA';
 import OmzetTab from './OmzetTab';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 import { cocok } from '../../lib/cari';
@@ -107,6 +108,7 @@ function CashierPage() {
   // Bill yang sedang ditambahi pesanan dari tab Input Order.
   const [tambahKe, setTambahKe] = useState(null); // { table_id, order_no, table_number }
   const [pindah, setPindah] = useState(null);    // bill yang sedang dipindah mejanya
+  const [kirimWA, setKirimWA] = useState(null);  // bill yang notanya mau dikirim ke WA tamu
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
@@ -364,6 +366,9 @@ function CashierPage() {
         <button className={`btn ${mainTab === 'pettycash' ? 'btn-brand' : ''}`} onClick={() => setMainTab('pettycash')}>💰 Pengeluaran</button>
       </div>
 
+      {kirimWA && (
+        <KirimNotaWA order={kirimWA} onTutup={() => setKirimWA(null)} />
+      )}
       {pindah && (
         <PindahMeja
           order={pindah}
@@ -602,6 +607,11 @@ function CashierPage() {
                   <div className="row">
                     <Link href={`/kitchen/print/${o.id}`} target="_blank" className="btn btn-block">🖨️ Struk Dapur</Link>
                     <Link href={`/nota/${o.id}`} target="_blank" className="btn btn-block">🧾 Nota</Link>
+                  </div>
+                  <div className="row">
+                    <button className="btn btn-block" onClick={() => setKirimWA(o)}>
+                      📱 Kirim Nota via WhatsApp
+                    </button>
                   </div>
                 </div>
               )}

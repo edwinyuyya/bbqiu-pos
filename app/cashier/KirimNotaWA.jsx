@@ -5,7 +5,6 @@ import { supabase } from '../../lib/supabase';
 import { taxPercent } from '../../lib/tax';
 import { nomorWA, linkWA } from '../../lib/wa';
 import { notaTeksWA } from '../../lib/notaWA';
-import { gambarNota, nulisBlob } from '../../lib/notaGambar';
 
 // Kirim nota ke WhatsApp tamu.
 //
@@ -19,8 +18,6 @@ export default function KirimNotaWA({ order, onTutup }) {
   const [namaPelanggan, setNamaPelanggan] = useState('');
   const [muat, setMuat] = useState(true);
   const [asal, setAsal] = useState('');
-  const [sibuk, setSibuk] = useState('');
-  const [pesanGambar, setPesanGambar] = useState('');
 
   useEffect(() => { setAsal(window.location.origin); }, []);
 
@@ -52,55 +49,6 @@ export default function KirimNotaWA({ order, onTutup }) {
 
   const nomor = nomorWA(hp);
   const tautan = nomor ? linkWA(hp, teks) : null;
-
-  const merchant = process.env.NEXT_PUBLIC_MERCHANT_NAME || 'BBQIU';
-
-  function buatBerkas() {
-    const kanvas = gambarNota({ order, items, merchant, persenPajak: taxPercent() });
-    return nulisBlob(kanvas).then((blob) =>
-      new File([blob], `Nota-${order.order_no}-Meja-${order.table_number}.jpg`, { type: 'image/jpeg' }));
-  }
-
-  // Lampiran hanya bisa lewat lembar bagikan bawaan sistem. wa.me tidak
-  // menerima berkas sama sekali, jadi tidak ada jalan mengirim gambar
-  // langsung ke satu nomor tanpa API berbayar — tujuannya dipilih kasir di
-  // lembar bagikan itu.
-  async function bagikanGambar() {
-    setPesanGambar(''); setSibuk('bagikan');
-    try {
-      const file = await buatBerkas();
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Nota #${order.order_no}` });
-        setPesanGambar('Lembar bagikan terbuka — pilih WhatsApp, lalu pilih nomor tamunya.');
-      } else {
-        unduh(file);
-        setPesanGambar(
-          'Perangkat ini tidak mendukung bagikan berkas. Gambarnya sudah diunduh — ' +
-          'lampirkan manual di WhatsApp.'
-        );
-      }
-    } catch (e) {
-      if (e?.name !== 'AbortError') setPesanGambar(e?.message || 'Gagal membuat gambar nota.');
-    } finally { setSibuk(''); }
-  }
-
-  function unduh(file) {
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url; a.download = file.name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-
-  async function unduhGambar() {
-    setPesanGambar(''); setSibuk('unduh');
-    try {
-      unduh(await buatBerkas());
-      setPesanGambar('Gambar nota tersimpan di folder Unduhan.');
-    } catch (e) {
-      setPesanGambar(e?.message || 'Gagal membuat gambar nota.');
-    } finally { setSibuk(''); }
-  }
 
   return (
     <div className="tirai" onClick={onTutup}>
@@ -154,29 +102,11 @@ export default function KirimNotaWA({ order, onTutup }) {
         >
           💬 Buka WhatsApp &amp; Kirim
         </a>
-        <p className="muted small" style={{ marginTop: 8 }}>
+        <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
           WhatsApp akan terbuka dengan pesan sudah terisi. Tekan kirim di sana —
           pesan tidak terkirim sendiri.
         </p>
 
-        <hr className="hr" />
-        <div className="muted small" style={{ marginBottom: 6 }}>Kirim sebagai gambar</div>
-        <div className="row">
-          <button className="btn btn-block" disabled={!!sibuk || muat} onClick={bagikanGambar}>
-            {sibuk === 'bagikan' ? 'Menyiapkan…' : '🖼️ Bagikan Gambar Nota'}
-          </button>
-          <button className="btn btn-block" disabled={!!sibuk || muat} onClick={unduhGambar}>
-            {sibuk === 'unduh' ? 'Menyiapkan…' : '⬇️ Unduh JPG'}
-          </button>
-        </div>
-        {pesanGambar && (
-          <p className="small" style={{ marginTop: 8, color: '#16794a' }}>{pesanGambar}</p>
-        )}
-        <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-          Lampiran tidak bisa lewat tautan WhatsApp, jadi gambarnya diserahkan ke
-          lembar <b>bagikan</b> bawaan HP — pilih WhatsApp di situ, lalu pilih nomor
-          tamunya. Untuk PDF, pakai tombol <b>🧾 Nota</b> lalu Cetak → Simpan sebagai PDF.
-        </p>
       </div>
     </div>
   );

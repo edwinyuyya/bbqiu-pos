@@ -6,8 +6,11 @@ import { SCOPE, SCOPE_LABEL, cekPromo, ringkasLingkup, hariIniWIB } from '../../
 import CariBox from '../components/CariBox';
 import { cocok } from '../../lib/cari';
 
+function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+
 const KOSONG = {
-  code: '', name: '', percent: '', scope: SCOPE.ALL,
+  code: '', name: '', jenis: 'persen', percent: '', amount: '',
+  min_spend: '', max_uses: '', scope: SCOPE.ALL,
   scope_category_ids: [], exclude_menu_item_ids: [], valid_from: '', valid_until: '',
 };
 
@@ -67,10 +70,16 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
   async function tambah() {
     setError('');
     const code = form.code.trim();
+    const nominal = form.jenis === 'nominal';
     const percent = Number(form.percent);
+    const amount = Number(form.amount);
     if (!code) return setError('Kode wajib diisi.');
     if (!form.name.trim()) return setError('Keterangan wajib diisi.');
-    if (!(percent > 0 && percent <= 100)) return setError('Persentase harus antara 1–100.');
+    if (nominal) {
+      if (!(amount > 0)) return setError('Nominal potongan harus lebih dari 0.');
+    } else if (!(percent > 0 && percent <= 100)) {
+      return setError('Persentase harus antara 1–100.');
+    }
     if (form.scope !== SCOPE.ALL && form.scope_category_ids.length === 0)
       return setError('Pilih minimal satu kategori.');
     if (form.valid_from && form.valid_until && form.valid_from > form.valid_until)
@@ -80,7 +89,10 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
     const { error: e } = await supabase.from('promos').insert({
       code,
       name: form.name.trim(),
-      percent,
+      percent: nominal ? null : percent,
+      amount: nominal ? amount : null,
+      min_spend: form.min_spend === '' ? null : Number(form.min_spend),
+      max_uses: form.max_uses === '' ? null : Number(form.max_uses),
       scope: form.scope,
       scope_category_ids: form.scope === SCOPE.ALL ? [] : form.scope_category_ids,
       exclude_menu_item_ids: form.exclude_menu_item_ids,
@@ -113,14 +125,44 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
     <div className="col">
       <div className="card">
         <div className="h2" style={{ marginBottom: 10 }}>Tambah Kode Promo</div>
+        <div className="opt-row" style={{ marginBottom: 8 }}>
+          {[['persen', 'Potongan persen'], ['nominal', 'Potongan nominal (cashback)']].map(([v, l]) => (
+            <button key={v} type="button" className={`chip ${form.jenis === v ? 'chip-on' : ''}`}
+              onClick={() => setForm({ ...form, jenis: v })}>{l}</button>
+          ))}
+        </div>
+
         <div className="row" style={{ flexWrap: 'wrap' }}>
-          <input className="input" style={{ maxWidth: 200 }} placeholder="Kode (mis. bbqiuopen50)"
+          <input className="input" style={{ maxWidth: 200 }} placeholder="Kode (mis. slc25)"
             value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-          <input className="input" style={{ maxWidth: 110 }} inputMode="numeric" placeholder="Diskon %"
-            value={form.percent} onChange={(e) => setForm({ ...form, percent: e.target.value })} />
-          <input className="input" placeholder="Keterangan (mis. Promo soft opening)"
+          {form.jenis === 'nominal' ? (
+            <input className="input" style={{ maxWidth: 170 }} inputMode="numeric"
+              placeholder="Potongan Rp"
+              value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          ) : (
+            <input className="input" style={{ maxWidth: 110 }} inputMode="numeric" placeholder="Diskon %"
+              value={form.percent} onChange={(e) => setForm({ ...form, percent: e.target.value })} />
+          )}
+          <input className="input" placeholder="Keterangan (mis. Cashback Solo Culinary)"
             value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </div>
+
+        <div className="row" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+          <div>
+            <div className="muted small">Minimum belanja (kosong = bebas)</div>
+            <input className="input" style={{ maxWidth: 190 }} inputMode="numeric" placeholder="mis. 50000"
+              value={form.min_spend} onChange={(e) => setForm({ ...form, min_spend: e.target.value })} />
+          </div>
+          <div>
+            <div className="muted small">Batas pakai (kosong = tak terbatas)</div>
+            <input className="input" style={{ maxWidth: 190 }} inputMode="numeric" placeholder="mis. 1"
+              value={form.max_uses} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} />
+          </div>
+        </div>
+        <p className="muted small" style={{ margin: '6px 0 0' }}>
+          Minimum belanja dihitung <b>setelah diskon menu, sebelum PB1</b>. Batas pakai
+          dihitung dari seluruh pemakaian, bukan per pelanggan — isi <b>1</b> untuk kode sekali pakai.
+        </p>
 
         <div style={{ marginTop: 10 }}>
           <div className="muted small">Berlaku untuk</div>
@@ -225,7 +267,9 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
             <div className="between">
               <div>
                 <span className="bold" style={{ fontSize: 17 }}>{p.code}</span>
-                <span className="badge badge-blue" style={{ marginLeft: 8 }}>{Number(p.percent)}%</span>
+                <span className="badge badge-blue" style={{ marginLeft: 8 }}>
+                  {Number(p.amount) > 0 ? `− ${rupiah(p.amount)}` : `${Number(p.percent)}%`}
+                </span>
               </div>
               <span className={`badge ${sah.ok ? 'badge-green' : 'badge-red'}`}>
                 {sah.ok ? 'Berlaku' : 'Tidak berlaku'}
@@ -240,6 +284,8 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
                 ? `Berlaku ${p.valid_from || '—'} s/d ${p.valid_until || 'dibatalkan'}`
                 : 'Berlaku sampai dibatalkan'}
               {' · '}dipakai {p.used_count || 0}×
+              {p.max_uses ? ` dari ${p.max_uses}` : ''}
+              {Number(p.min_spend) > 0 ? ` · min. belanja ${rupiah(p.min_spend)}` : ''}
             </div>
             {!sah.ok && (
               <div className="small" style={{ marginTop: 4, color: '#c0271f' }}>{sah.alasan}</div>

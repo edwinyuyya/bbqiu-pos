@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../../../lib/supabaseServer';
-import { cekPromo, normalisasiKode } from '../../../../../lib/promo';
+import { cekPromo, cekMinSpend, normalisasiKode, promoNominal } from '../../../../../lib/promo';
 import { recalcOrder } from '../../../../../lib/recalcOrder';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,32 @@ export async function POST(req, { params }) {
   const sah = cekPromo(promo);
   if (!sah.ok) return NextResponse.json({ error: sah.alasan }, { status: 400 });
 
+  // Syarat minimum belanja diperiksa SEBELUM dipasang, bukan dibiarkan lolos
+  // lalu diam-diam memberi potongan nol. Kasir yang melihat kode "berhasil"
+  // tapi totalnya tidak berubah akan mengira sistemnya rusak, lalu memberi
+  // potongan manual.
+  if (promo.min_spend) {
+    const kering = await recalcOrder(db, id, null);   // hitung tanpa promo dulu
+    const cekMin = cekMinSpend(promo, kering?.setelah_diskon ?? 0);
+    if (!cekMin.ok) {
+      return NextResponse.json({ error: cekMin.alasan }, { status: 400 });
+    }
+  }
+
   const hasil = await recalcOrder(db, id, promo);
+
+  // Potongan nominal yang berakhir nol berarti syaratnya tidak terpenuhi —
+  // jangan sampai terpasang seolah berhasil.
+  if (promoNominal(promo) > 0 && !hasil?.cashback) {
+    await recalcOrder(db, id, null);
+    return NextResponse.json(
+      { error: hasil?.kurang_min_spend
+          ? `Belanja minimal Rp ${hasil.kurang_min_spend.min.toLocaleString('id-ID')}. `
+            + `Saat ini baru Rp ${Math.round(hasil.kurang_min_spend.dasar).toLocaleString('id-ID')}.`
+          : 'Kode ini tidak bisa dipakai pada bill ini.' },
+      { status: 400 }
+    );
+  }
   await db.from('promos').update({ used_count: (promo.used_count || 0) + 1 }).eq('id', promo.id);
 
   return NextResponse.json({ ok: true, promo: { code: promo.code, name: promo.name }, ...hasil });

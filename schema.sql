@@ -479,6 +479,19 @@ alter table orders add column if not exists discount   numeric default 0;
 
 alter table promos add column if not exists exclude_menu_item_ids uuid[] default '{}';
 
+-- Promo NOMINAL (cashback) — alternatif dari promo persentase.
+-- percent tidak lagi wajib karena promo nominal tidak punya persentase,
+-- tapi salah satu di antara keduanya harus terisi: promo tanpa nilai apa pun
+-- akan lolos dipasang kasir lalu memberi potongan nol tanpa penjelasan.
+alter table promos add column if not exists amount    numeric;  -- potongan rupiah, sebelum PB1
+alter table promos add column if not exists min_spend numeric;  -- minimum belanja (setelah diskon menu, sebelum PB1)
+alter table promos add column if not exists max_uses  int;      -- batas total pemakaian; 1 = sekali pakai
+alter table promos alter column percent drop not null;
+alter table promos drop constraint if exists promos_ada_nilainya;
+alter table promos add constraint promos_ada_nilainya
+  check (coalesce(percent,0) > 0 or coalesce(amount,0) > 0);
+
+
 -- Menu yang tidak boleh kena kode promo apa pun (paket, menu harga khusus).
 -- Melekat pada menunya, bukan pada promonya: promo baru tidak perlu ingat
 -- untuk mengecualikannya lagi.

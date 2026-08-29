@@ -189,6 +189,11 @@ export async function POST(req) {
       .eq('table_id', table.id)
       .in('status', ['open', 'preparing', 'served'])
       .neq('payment_status', 'paid')
+      // Bill induk didahulukan dari bill hasil split. Satu meja bisa punya
+      // dua bill hidup setelah dipisah, dan yang memisahkan diri biasanya
+      // sudah selesai makan — pesanan baru dari QR meja hampir pasti milik
+      // rombongan yang masih duduk, bukan miliknya.
+      .order('split_from_order_id', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

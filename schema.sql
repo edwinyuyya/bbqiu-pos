@@ -93,6 +93,12 @@ alter table orders add column if not exists voided_by text;
 alter table orders add column if not exists void_photo text;
 alter table orders add column if not exists customer_claimed_paid boolean default false;
 alter table orders add column if not exists claimed_paid_at timestamptz;
+-- split bill: bill hasil pisahan menunjuk ke bill asalnya. Dipakai untuk
+-- menentukan bill mana yang menerima pesanan tambahan dari QR meja — tanpa
+-- ini, pesanan tamu yang belum bayar menempel ke tagihan orang yang baru saja
+-- memisahkan diri.
+alter table orders add column if not exists split_from_order_id uuid references orders(id);
+create index if not exists idx_orders_split_from on orders(split_from_order_id);
 
 -- ---------- ITEM PADA ORDER ----------
 create table if not exists order_items (

@@ -9,6 +9,7 @@ import CariBox from '../components/CariBox';
 import TakeOrder from './TakeOrder';
 import PindahMeja from './PindahMeja';
 import KirimNotaWA from './KirimNotaWA';
+import SplitBill from './SplitBill';
 import OmzetTab from './OmzetTab';
 import { WAJIB_BAYAR_DULU } from '../../lib/orderFlow';
 import { cocok } from '../../lib/cari';
@@ -109,6 +110,7 @@ function CashierPage() {
   const [tambahKe, setTambahKe] = useState(null); // { table_id, order_no, table_number }
   const [pindah, setPindah] = useState(null);    // bill yang sedang dipindah mejanya
   const [kirimWA, setKirimWA] = useState(null);  // bill yang notanya mau dikirim ke WA tamu
+  const [split, setSplit] = useState(null);      // bill yang sedang dipisah (split bill)
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
@@ -369,6 +371,21 @@ function CashierPage() {
       {kirimWA && (
         <KirimNotaWA order={kirimWA} onTutup={() => setKirimWA(null)} />
       )}
+      {split && (
+        <SplitBill
+          order={split}
+          onTutup={() => setSplit(null)}
+          onSelesai={(d) => {
+            setSplit(null);
+            load();
+            alert(
+              `Bill #${d.asal.order_no} → ${rupiah(d.asal.total)}\n` +
+              `Bill baru #${d.baru.order_no} → ${rupiah(d.baru.total)}\n\n` +
+              'Keduanya ada di meja yang sama dan ditagih terpisah.'
+            );
+          }}
+        />
+      )}
       {pindah && (
         <PindahMeja
           order={pindah}
@@ -435,6 +452,10 @@ function CashierPage() {
               </div>
               <div className="row" style={{ marginTop: 6, flexWrap: 'wrap' }}>
                 <span className="badge badge-blue">{o.status}</span>
+                {/* Dua bill di satu meja gampang tertukar saat menagih. */}
+                {o.split_from_order_id && (
+                  <span className="badge badge-amber" title={o.note || ''}>🧾 {o.note || 'Bill pisahan'}</span>
+                )}
                 <span className="badge">{o.payment_method === 'qris' ? 'QRIS' : 'Kasir'}</span>
                 {!paid && o.customer_claimed_paid && (
                   <span className="badge badge-amber">🔔 Klaim bayar — cek app bank</span>
@@ -595,6 +616,11 @@ function CashierPage() {
                     <button className="btn btn-block" onClick={() => setPindah(o)}>
                       🔀 Pindah Meja
                     </button>
+                    {!paid && (
+                      <button className="btn btn-block" onClick={() => setSplit(o)}>
+                        🧾 Split Bill
+                      </button>
+                    )}
                   </div>
                   <div className="row">
                     <button className="btn btn-block" disabled={busy === o.id} onClick={() => patch(o.id, { status: 'closed' })}>

@@ -113,6 +113,22 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
     await supabase.from('promos').update({ active: !p.active }).eq('id', p.id);
     reload();
   }
+  // Jatah kode berbatas tidak pulih sendiri saat kasir melepasnya — itu
+  // disengaja, supaya kode sekali-pakai tidak bisa didaur ulang dengan cara
+  // memasang lalu melepasnya. Yang tersisa adalah kasus salah pasang, dan
+  // itu keputusan owner: dari sini, bukan dari layar kasir.
+  async function resetPakai(p) {
+    if (!confirm(
+      `Reset pemakaian kode ${p.code}?\n\n`
+      + `Sekarang tercatat dipakai ${p.used_count || 0}× dari ${p.max_uses}. `
+      + `Setelah direset kodenya bisa dipakai lagi dari nol.\n\n`
+      + `Lakukan ini hanya kalau kode tadi salah pasang — bill yang sudah `
+      + `terlanjur dapat potongan tidak ikut berubah.`
+    )) return;
+    await supabase.from('promos').update({ used_count: 0 }).eq('id', p.id);
+    reload();
+  }
+
   async function hapus(p) {
     if (!confirm(`Hapus promo ${p.code}?\n\nBill lama yang sudah memakai kode ini tidak berubah.`)) return;
     await supabase.from('promos').delete().eq('id', p.id);
@@ -296,6 +312,11 @@ export default function PromoTab({ promos, categories, items = [], reload }) {
               </button>
               <button className="btn btn-block" onClick={() => hapus(p)}>Hapus</button>
             </div>
+            {Number(p.max_uses) > 0 && Number(p.used_count) > 0 && (
+              <button className="btn btn-block" style={{ marginTop: 6 }} onClick={() => resetPakai(p)}>
+                ♻️ Reset pemakaian ({p.used_count}× → 0)
+              </button>
+            )}
           </div>
         );
       })}

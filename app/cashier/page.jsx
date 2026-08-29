@@ -115,10 +115,21 @@ function CashierPage() {
   const [busy, setBusy] = useState('');
   const [cap, setCap] = useState(null); // { mode:'void'|'close', title, onPhoto }
   const [kodePromo, setKodePromo] = useState({}); // order_id -> kode yang diketik
+  const [promoTerbatas, setPromoTerbatas] = useState({}); // promo_id -> true kalau jatahnya terbatas
   const [calls, setCalls] = useState([]);
   const [soundOn, setSoundOn] = useState(false);
   const audioCtxRef = useRef(null);
   const seenCallIds = useRef(null);
+
+  // Promo berjatah terbatas dikenali di sini supaya kasir bisa diperingatkan
+  // sebelum melepas kode yang jatahnya tidak akan kembali.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('promos').select('id, max_uses').not('max_uses', 'is', null);
+      setPromoTerbatas(Object.fromEntries((data || [])
+        .filter((p) => Number(p.max_uses) > 0).map((p) => [p.id, true])));
+    })();
+  }, []);
 
   const loadCalls = useCallback(async () => {
     const r = await fetch('/api/waiter-calls?status=pending');
@@ -230,11 +241,25 @@ function CashierPage() {
   }
 
   async function lepasPromo(o) {
+    // Kode berjatah tidak pulih setelah dilepas. Kasir harus tahu itu SEBELUM
+    // menekan, bukan sesudah kodenya hangus dan tamunya sudah pergi.
+    const berjatah = promoTerbatas[o.promo_id];
+    if (berjatah && !confirm(
+      `Lepas kode ${o.promo_code} dari bill #${o.order_no}?\n\n`
+      + `Kode ini berjatah terbatas dan jatahnya TIDAK kembali. `
+      + `Kalau memang salah pasang, minta owner me-reset pemakaiannya di menu Admin.`
+    )) return;
     setBusy(o.id);
     try {
       const r = await fetch(`/api/orders/${o.id}/promo`, { method: 'DELETE' });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Gagal melepas kode');
+      if (d.hangus) {
+        alert(
+          `Kode ${d.hangus.code} sudah hangus (terpakai ${d.hangus.terpakai} dari ${d.hangus.max}).\n\n`
+          + 'Hubungi owner kalau kode ini perlu dihidupkan lagi.'
+        );
+      }
       await load();
     } catch (e) {
       alert(e.message);
@@ -542,6 +567,20 @@ function CashierPage() {
                 </>
               )}
               <div className="between"><span className="bold">Total</span><span className="bold">{rupiah(o.total)}</span></div>
+
+              {/* Kode terpasang tapi potongannya nol. Terjadi kalau isi bill
+                  berkurang setelah kodenya dipasang — item dibatalkan, atau
+                  bill dipecah lewat split — sampai syarat minimum belanjanya
+                  tidak lagi terpenuhi. Tanpa peringatan ini kasir menagih
+                  penuh sambil kode tetap terlihat menempel, dan tamu yang
+                  merasa punya potongan tidak bisa dijelaskan. */}
+              {tab === 'active' && o.promo_code && !Number(o.discount) && o.status !== 'cancelled' && (
+                <div className="small" style={{ marginTop: 8, color: '#8a5a00' }}>
+                  ⚠️ Kode <b>{o.promo_code}</b> terpasang tapi potongannya Rp 0 —
+                  syarat minimum belanja tidak lagi terpenuhi. Tambah pesanan
+                  supaya memenuhi syarat, atau tagih penuh.
+                </div>
+              )}
 
               {/* Kode promo hanya boleh dipasang sebelum lunas — sesudahnya
                   jumlah yang sudah dibayar tidak lagi cocok dengan total. */}

@@ -20,7 +20,7 @@ function tglID(iso) {
 // belasan) dan tamu yang sudah terdaftar akan didaftar ulang oleh kasir yang
 // tidak menemukan namanya — jejak kunjungannya lalu terpecah dua dan hadiahnya
 // tidak pernah tercapai.
-export default function PilihPelanggan({ onPilih, onTolak }) {
+export default function PilihPelanggan({ onPilih }) {
   const [hp, setHp] = useState('');
   const [cari, setCari] = useState(false);
   const [hasil, setHasil] = useState(null);   // { customer, nomor_valid }
@@ -180,20 +180,15 @@ export default function PilihPelanggan({ onPilih, onTolak }) {
       )}
 
       <hr className="hr" />
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Data dipakai untuk program pelanggan BBQIU (hadiah kunjungan &amp; ucapan
-        ulang tahun). Sampaikan ke tamu, dan hormati kalau menolak.
-      </p>
-
-      {/* Tamu berhak menolak memberikan nomornya, dan antrian tidak boleh
-          berhenti karena itu. Ordernya tetap jalan, hanya tidak menempel ke
-          pelanggan mana pun — jadi tidak menambah kunjungan siapa-siapa. */}
-      <button className="btn btn-block" onClick={onTolak}>
-        Tamu menolak memberi nomor — lanjut tanpa daftar
-      </button>
-      <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
-        Pesanannya tetap bisa diproses, tapi tidak terhitung kunjungan dan tidak
-        dapat hadiah.
+      {/* Tidak ada jalan pintas di sini. Order manual HARUS menempel ke satu
+          pelanggan: nomor dicari, kalau belum ada didaftarkan. Selama tombol
+          lewati masih tersedia, itu yang paling sering ditekan saat antrian
+          panjang — dan kunjungan yang tidak tercatat berarti hadiah yang
+          tidak pernah tercapai serta ulang tahun yang tidak pernah terkirim. */}
+      <p className="muted small" style={{ marginTop: 0, marginBottom: 0 }}>
+        Nomor WhatsApp &amp; nama wajib diisi untuk melanjutkan. Sampaikan ke tamu
+        bahwa datanya dipakai untuk program pelanggan BBQIU — hadiah kunjungan
+        ke-{KUNJUNGAN_HADIAH} dan ucapan ulang tahun.
       </p>
     </div>
   );

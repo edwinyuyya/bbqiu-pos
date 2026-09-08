@@ -154,7 +154,6 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   const [pelanggan, setPelanggan] = useState(null);
   const [hadiah, setHadiah] = useState('');   // menu hadiah yang dipilih tamu
   const [tableId, setTableId] = useState('');
-  const [customerName, setCustomerName] = useState('');
   const [payment, setPayment] = useState('cashier');
   const [cart, setCart] = useState({});   // cartKey -> qty
   const [notes, setNotes] = useState({}); // cartKey -> catatan
@@ -282,7 +281,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
   }
 
   function reset() {
-    setCart({}); setNotes({}); setCustomerName(''); setTableId('');
+    setCart({}); setNotes({}); setTableId('');
     setPayment('cashier'); setResult(null); setError(''); setCari(''); setKategoriAktif('');
     setTabInput('pelanggan');
     setPelanggan(null); setHadiah('');
@@ -304,6 +303,14 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
 
   async function submit() {
     setError('');
+    // Order manual wajib menempel ke satu pelanggan. Tab langkah 2-4 sudah
+    // dimatikan sampai pelanggannya dipilih, tapi penjaga itu ada di tampilan
+    // saja — yang benar-benar menahan adalah pemeriksaan di sini.
+    if (!tambahKe && !pelanggan) {
+      setError('Pilih atau daftarkan pelanggannya dulu di langkah 1.');
+      setTabInput('pelanggan');
+      return;
+    }
     if (!tableId) { setError('Pilih meja dulu.'); setTabInput('meja'); return; }
     if (!cartLines.length) { setError('Belum ada menu dipilih.'); return; }
     // Meja bisa terisi oleh kasir lain sejak layar ini dibuka. Dicegat di sini
@@ -324,7 +331,7 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
           // Kalau menambah ke bill tertentu, tunjuk billnya langsung supaya
           // tidak tertebak salah oleh sistem.
           order_id: tambahKe?.id || undefined,
-          customer_name: customerName || pelanggan?.name || '',
+          customer_name: pelanggan?.name || '',
           customer_id: pelanggan?.id || null,
           payment_method: payment,
           items: [
@@ -419,20 +426,21 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
         </button>
         <button
           className={`btn ${tabInput === 'meja' ? 'btn-brand' : ''}`}
-          disabled={!!tambahKe}
+          disabled={!!tambahKe || !pelanggan}
           onClick={() => { setTabInput('meja'); muatTerpakai(); }}
         >
           2. Pilih Meja{mejaTerpilih ? ` · Meja ${mejaTerpilih.table_number}` : ''}
         </button>
         <button
           className={`btn ${tabInput === 'barcode' ? 'btn-brand' : ''}`}
-          disabled={!!tambahKe || !mejaTerpilih}
+          disabled={!!tambahKe || !pelanggan || !mejaTerpilih}
           onClick={() => setTabInput('barcode')}
         >
           3. Barcode Meja
         </button>
         <button
           className={`btn ${tabInput === 'menu' ? 'btn-brand' : ''}`}
+          disabled={!tambahKe && !pelanggan}
           onClick={() => setTabInput('menu')}
         >
           4. Menu &amp; Keranjang{totalQty > 0 ? ` (${totalQty})` : ''}
@@ -442,7 +450,6 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
       {tabInput === 'pelanggan' && (
         <PilihPelanggan
           onPilih={(c) => { setPelanggan(c); setTabInput('meja'); muatTerpakai(); }}
-          onTolak={() => { setPelanggan(null); setHadiah(''); setTabInput('meja'); muatTerpakai(); }}
         />
       )}
 
@@ -719,8 +726,21 @@ export default function TakeOrder({ onCreated, tambahKe = null, onBatalTambah })
                   </button>
                 </div>
               )}
-              <input className="input" placeholder="Nama pelanggan (opsional)"
-                value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              {!tambahKe && (
+                <div className="between">
+                  <span className={pelanggan ? 'bold' : 'muted'}>
+                    {pelanggan
+                      ? `${pelanggan.name} · ${pelanggan.phone}`
+                      : 'Pelanggan belum dipilih'}
+                  </span>
+                  <button
+                    className="btn" style={{ padding: '6px 10px', fontSize: 13 }}
+                    onClick={() => setTabInput('pelanggan')}
+                  >
+                    {pelanggan ? 'Ganti pelanggan' : 'Pilih pelanggan'}
+                  </button>
+                </div>
+              )}
               <div className="row" style={tambahKe ? { display: 'none' } : undefined}>
                 <label className={`btn ${payment === 'cashier' ? 'btn-brand' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
                   <input type="radio" style={{ display: 'none' }} checked={payment === 'cashier'} onChange={() => setPayment('cashier')} />

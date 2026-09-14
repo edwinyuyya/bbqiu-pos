@@ -129,6 +129,16 @@ alter table order_items add column if not exists cancelled_at  timestamptz;
 alter table order_items add column if not exists cancel_reason text;
 alter table order_items add column if not exists cancelled_by  text;
 create index if not exists idx_orderitems_cancelled on order_items(order_id, cancelled_at);
+-- kompliment: item tetap tercetak di nota dengan harga Rp 0.
+-- Harga normalnya disimpan di comp_price supaya nilai yang dibagikan tetap
+-- bisa dihitung, dan stok bahannya tetap terpotong seperti penjualan biasa —
+-- makanannya memang benar-benar keluar dari dapur.
+alter table order_items add column if not exists complimentary boolean default false;
+alter table order_items add column if not exists comp_price  numeric;
+alter table order_items add column if not exists comp_reason text;
+alter table order_items add column if not exists comp_by     text;
+alter table order_items add column if not exists comp_at     timestamptz;
+create index if not exists idx_orderitems_comp on order_items(complimentary) where complimentary;
 alter table order_items add column if not exists discount      numeric default 0;
 alter table order_items add column if not exists discount_note text;
 -- gelombang pemesanan: 1 = pesanan awal, 2+ = tambahan dari meja yang sama.

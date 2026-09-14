@@ -49,11 +49,20 @@ export default async function NotaPage({ params }) {
         <div className="line" />
         {(items || []).map((it) => (
           <div key={it.id} style={{ marginBottom: 3 }}>
-            <div>{it.name}{variantSuffix(it)}</div>
+            <div>{it.name}{variantSuffix(it)}{it.complimentary ? ' (KOMPLIMENT)' : ''}</div>
             <div className="item">
               <span>{it.qty} x {rupiah(it.price)}</span>
               <span className="rgt">{rupiah(it.qty * it.price)}</span>
             </div>
+            {/* Nilai yang digratiskan ikut ditulis. Baris Rp 0 tanpa
+                keterangan terbaca seperti salah input; tamu juga berhak tahu
+                berapa yang sebenarnya diberikan kepadanya. */}
+            {it.complimentary && Number(it.comp_price) > 0 && (
+              <div className="item">
+                <span>&nbsp;&nbsp;Gratis — senilai</span>
+                <span className="rgt">{rupiah(it.qty * it.comp_price)}</span>
+              </div>
+            )}
             {/* Potongan ditulis di barisnya sendiri. Tanpa ini nota cuma
                 memuat satu angka diskon di bawah, dan tamu wajar mengira
                 seluruh isi nota — termasuk minuman — ikut dipotong. */}

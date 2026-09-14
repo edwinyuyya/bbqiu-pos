@@ -47,6 +47,18 @@ export async function GET(req) {
     .eq('type', 'in');
   const purchase = (moves || []).reduce((s, m) => s + Number(m.cost || 0), 0);
 
+  // Kompliment hari ini. Nilainya tidak muncul di omzet mana pun — memang
+  // digratiskan — jadi kalau tidak ditulis di sini, tidak ada laporan yang
+  // pernah menyebutkannya dan pemilik baru tahu saat stok tidak cocok.
+  const { data: comps } = await db
+    .from('order_items')
+    .select('name, qty, comp_price, comp_reason, comp_by, orders(order_no, table_number, status)')
+    .eq('complimentary', true)
+    .is('cancelled_at', null)
+    .gte('comp_at', startISO);
+  const compHidup = (comps || []).filter((c) => c.orders?.status !== 'cancelled');
+  const compValue = compHidup.reduce((s, c) => s + Number(c.comp_price || 0) * Number(c.qty || 0), 0);
+
   const tgl = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
   let msg =
@@ -56,7 +68,17 @@ export async function GET(req) {
     `   • Kasir: ${rupiahWA(cash)}\n` +
     `🧾 Order: ${live.length} (lunas ${paid.length}, belum ${live.length - paid.length})\n` +
     `🛒 Belanja: ${rupiahWA(purchase)}\n` +
-    `🚫 Void: ${cancelled.length}× (${rupiahWA(voidValue)})`;
+    `🚫 Void: ${cancelled.length}× (${rupiahWA(voidValue)})\n` +
+    `🎁 Kompliment: ${compHidup.length}× (${rupiahWA(compValue)})`;
+
+  if (compHidup.length) {
+    msg += '\n\n*Detail Kompliment:*';
+    compHidup.slice(0, 10).forEach((c) => {
+      msg += `\n• #${c.orders?.order_no} Meja ${c.orders?.table_number} ${c.qty}× ${c.name}`
+        + ` ${rupiahWA(Number(c.comp_price || 0) * Number(c.qty || 0))}`
+        + ` — ${c.comp_reason || '-'} (${c.comp_by || '-'})`;
+    });
+  }
 
   if (cancelled.length) {
     msg += '\n\n*Detail Void:*';
@@ -66,5 +88,8 @@ export async function GET(req) {
   }
 
   const sent = await sendNotif(msg);
-  return NextResponse.json({ ok: true, sent, revenue, orders: live.length, voids: cancelled.length, message: msg });
+  return NextResponse.json({
+    ok: true, sent, revenue, orders: live.length, voids: cancelled.length,
+    kompliment: compHidup.length, nilai_kompliment: compValue, message: msg,
+  });
 }
